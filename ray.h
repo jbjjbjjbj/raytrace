@@ -1,28 +1,22 @@
 #ifndef RAY_H
 #define RAY_H
 
+#include <stdbool.h>
+#include <stdint.h>
 #include "vector.h"
+#include "scene.h"
 
 typedef struct {
     // Start is not unique so it's a pointer to save copying time
     vector_t *start;
-
-    vector_t direction;
+    vector_t *direction;
 } ray_t;
 
-typedef struct {
-	vector_t *center;
-	COORD_T radius;
-} sphere_t;
+COORD_T ray_intersect(object_t *o, ray_t *ray, bool skip_dist);
+COORD_T ray_intersect_sphere(sphere_t *s, ray_t *ray, bool skip_dist);
+COORD_T ray_intersect_plane(plane_t *p, ray_t *ray, bool skip_dist);
 
-// TODO make this less inconsistent
-typedef struct {
-	vector_t *start;
-	vector_t norm;
-} plane_t;
-
-
-COORD_T ray_intersect_sphere(sphere_t *s, ray_t *ray);
-COORD_T ray_intersect_plane(plane_t *p, ray_t *ray);
+object_t *ray_cast(space_t *s, ray_t *r, COORD_T *dist_ret, bool chk, COORD_T chk_dist);
+color_t *ray_trace(space_t *s, unsigned int x, unsigned int y);
 
 #endif

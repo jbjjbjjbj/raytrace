@@ -2,7 +2,7 @@
 #define VECTOR_H
 	
 #define COORD_T float
-#define ZERO_APROX 1e-6
+#define ZERO_APROX 1e-5
 
 typedef struct {
 	COORD_T x;
