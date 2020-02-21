@@ -25,3 +25,42 @@ color_t *color_set(color_t *c, uint8_t r, uint8_t g, uint8_t b)
 
 	return c;
 }
+
+color_t *color_add(color_t *dest, color_t *a, color_t *b)
+{
+	if (!dest) {
+		dest = (color_t *) malloc(sizeof(dest));
+	}
+
+	dest->r = a->r + b->r;
+	dest->g = a->g + b->g;
+	dest->b = a->b + b->b;
+
+	return dest;
+}
+
+color_t *color_scale(color_t *dest, color_t *a, float b)
+{
+	if (!dest) {
+		dest = (color_t *) malloc(sizeof(dest));
+	}
+
+	dest->r = a->r * b;
+	dest->g = a->g * b;
+	dest->b = a->b * b;
+
+	return dest;
+}
+
+color_t *color_scale_vector(color_t *dest, color_t *a, vector_t *v)
+{
+	if (!dest) {
+		dest = (color_t *) malloc(sizeof(dest));
+	}
+
+	dest->r = a->r * v->x;
+	dest->g = a->g * v->y;
+	dest->b = a->b * v->z;
+
+	return dest;
+}

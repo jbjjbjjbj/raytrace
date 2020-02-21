@@ -19,6 +19,9 @@ int main()
 	s.objects = NULL;
 	s.lights = NULL;
 
+	material_t m;
+	vector_set(&m.color, 0, 1, 0);
+
 	vector_set(&s.view.position, 0, 15, 10);
 	vector_set(&s.view.target, 0, 0, 0);
 	s.view.width = TESTW;
@@ -27,8 +30,8 @@ int main()
 	viewpoint_init(&s.view);
 	
 	// Setup plane
-	add_sphere(&s, vector_set(NULL, 0, 0, 5), 5);
-	add_sphere(&s, vector_set(NULL, 10, 0, 5), 5);
+	add_sphere(&s, vector_set(NULL, 0, 0, 5), 5, &m);
+	//add_sphere(&s, vector_set(NULL, 10, 0, 5), 5);
 	add_plane(&s, vector_set(NULL, 0, 0, 2), vector_set(NULL, 0, 0, 1));
 	add_light(&s, vector_set(NULL, 10, 0, 20), color_set(NULL, 255, 255, 255));
 

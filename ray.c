@@ -142,33 +142,46 @@ color_t *ray_trace(space_t *s, unsigned int x, unsigned int y)
 	if (!o) {
 		return NULL;
 	}
-	//printf("dist: %f\n", dist);
 
 	// Calculate new ray point
 	r.start = vector_scale(NULL, r.direction, dist);
 	vector_add(r.start, r.start, &s->view.position);
 
+	// Calculate normal vector
+	vector_t n;
+	obj_norm_at(o, &n, r.start);
+
+	// Hit color
+	color_t *c = color_set(NULL, 0, 0, 0);
+
 	// Cast light rays
-	light_t *l = s->lights;
-	while (l) {
-		vector_t tmp;
+	light_t *light = s->lights;
+	while (light) {
+		vector_t l;
 		// Calculate distance to light
-		vector_sub(&tmp, l->pos, r.start);
-		COORD_T d = vector_len(&tmp);
-		
-		// Calculate unit
-		vector_scale_inv(&tmp, &tmp, vector_len(&tmp));
+		vector_sub(&l, light->pos, r.start);
+		COORD_T d = vector_len(&l);
 
 		// Find obstacles
-		r.direction = &tmp;
+		r.direction = &l;
 		object_t *obs = ray_cast(s, &r, NULL, true, d);
-
-		if (!obs) {
-			return color_set(NULL, 100, 100, o->type == TYPE_SPHERE ? 200 :0);
+		if (obs) {
+			light = light->next;
+			continue;
 		}
+		
+		// Calculate unit
+		vector_scale_inv(&l, &l, vector_len(&l));
+		color_t tmp;
+		color_scale(&tmp, light->defuse, vector_dot(&l, &n));
+		color_add(c, &tmp, c);
 			
-		l = l->next;
+		light = light->next;
 	}
 
-	return NULL;
+	if (o->m) {
+		color_scale_vector(c, c, &o->m->color);
+	}
+
+	return c;
 }
