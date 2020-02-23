@@ -32,9 +32,13 @@ typedef struct light_s{
 typedef struct {
 	vector_t color;
 
+	// Light properties
 	COORD_T defuse;
 	COORD_T specular;
 	unsigned int shine;
+	
+	// Reflective properties
+	COORD_T reflective;
 } material_t;
 
 // General object structure

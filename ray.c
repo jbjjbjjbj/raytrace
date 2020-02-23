@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
 #include "vector.h"
 
 #include "ray.h"
@@ -148,14 +149,10 @@ object_t *ray_cast(space_t *s, ray_t *r, COORD_T *dist_ret, bool chk, COORD_T ch
 	return smallest;
 }
 
-static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *eye, vector_t *point)
+static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point)
 {
 	ray_t r;
 	r.start = point;
-
-	// Calculate normal vector
-	vector_t N;
-	obj_norm_at(o, &N, point);
 	
 	// And vector towards viewer
 	vector_t V;
@@ -186,7 +183,7 @@ static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *eye
 		
 		// Calculate Deffuse part
 		color_t tmp;
-		COORD_T cl = vector_dot(&l, &N);
+		COORD_T cl = vector_dot(&l, N);
 		if (cl > 0) {
 			color_scale(&tmp, light->defuse, cl * o->m->defuse);
 			color_add(dest, &tmp, dest);
@@ -195,7 +192,7 @@ static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *eye
 		// calculate specular part. TODO implement blinn-phong
 		// Calculate R_m
 		vector_t R;
-		vector_scale(&R, &N, 2 * vector_dot(&l, &N));
+		vector_scale(&R, N, 2 * vector_dot(&l, N));
 		vector_sub(&R, &R, &l);
 		
 		// Add it to the light
@@ -210,6 +207,49 @@ static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *eye
 	}
 }
 
+int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T scale)
+{
+	COORD_T dist;
+	color_t c;
+	color_set(&c, 0, 0, 0);
+
+	object_t *o = ray_cast(s, ray, &dist, false, 0);
+	if (!o) {
+		return 1;
+	}
+
+	vector_t rdir, rstart;
+	ray_t r = {start: &rstart, direction: &rdir};
+
+	vector_scale(r.start, ray->direction, dist);
+	vector_add(r.start, r.start, ray->start);
+
+	// Calculate normal vector
+	vector_t N;
+	obj_norm_at(o, &N, r.start);
+
+	// Check if we should calculate light
+	if (o->m->defuse + o->m->specular > ZERO_APROX) {
+		// Add all light hitting o at r.start to c
+		ray_calc_light(s, &c, o, &N, ray->start, r.start);
+	}
+
+	// Calculate reflection vector
+	if (hop < 2 && o->m->reflective > ZERO_APROX) {
+		vector_scale(r.direction, &N, 2 * vector_dot(ray->direction, &N));
+		vector_sub(r.direction, ray->direction, r.direction);
+
+		ray_trace_recur(s, &c, &r, hop+1, o->m->reflective);
+	}
+
+	// Scale by the objects own color.
+	color_scale_vector(&c, &c, &o->m->color);
+	color_scale(&c, &c, scale);
+	color_add(dest, dest, &c);
+
+	return 0;
+}
+
 color_t *ray_trace(space_t *s, unsigned int x, unsigned int y)
 {
 	// Setup primary ray
@@ -218,22 +258,15 @@ color_t *ray_trace(space_t *s, unsigned int x, unsigned int y)
 	r.direction = vector_copy(NULL, NULL);
 	viewpoint_ray(&s->view, r.direction, x, y);
 
-	// Cast it
-	COORD_T dist;
-	object_t *o = ray_cast(s, &r, &dist, false, 0);
-	if (!o) {
-		return NULL;
-	}
-
-	r.start = vector_scale(NULL, r.direction, dist);
-	vector_add(r.start, r.start, &s->view.position);
-
-	// Hit color
+	// Init return color. Will be accumilated with all the detected light.
 	color_t *c = color_set(NULL, s->ambient.r, s->ambient.g, s->ambient.b);
 
-	ray_calc_light(s, c, o, &s->view.position, r.start);
-
-	color_scale_vector(c, c, &o->m->color);
+	// Run the recursive ray trace
+	int status = ray_trace_recur(s, c, &r, 0, 1);
+	if (status) {
+		free(c);
+		return NULL;
+	}
 
 	return c;
 }

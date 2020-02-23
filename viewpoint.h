@@ -3,8 +3,8 @@
 
 #include "vector.h"
 
-// 90 degrees
-#define FOV 3.1415/2
+// 100 degrees
+#define FOV 1.74533
 
 typedef struct {
 	// Viewpoint dimensions
