@@ -24,12 +24,17 @@ typedef struct {
 typedef struct light_s{
 	vector_t *pos;
 	color_t *defuse;
+	color_t *specular;
 
 	struct light_s *next;
 } light_t;
 
 typedef struct {
 	vector_t color;
+
+	COORD_T defuse;
+	COORD_T specular;
+	unsigned int shine;
 } material_t;
 
 // General object structure
@@ -50,11 +55,13 @@ typedef struct {
 	viewpoint_t view;
 	object_t *objects;
 	light_t *lights;
+
+	color_t ambient;
 } space_t;
 
 object_t *add_sphere(space_t *s, vector_t *c, COORD_T r, material_t *m);
-object_t *add_plane(space_t *s, vector_t *start, vector_t *dir);
-light_t *add_light(space_t *s, vector_t *pos, color_t *defuse);
+object_t *add_plane(space_t *s, vector_t *start, vector_t *dir, material_t *m);
+light_t *add_light(space_t *s, vector_t *pos, color_t *defuse, color_t *specular);
 
 void obj_norm_at(object_t *o, vector_t *dest, vector_t *point);
 

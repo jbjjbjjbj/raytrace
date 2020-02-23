@@ -32,9 +32,14 @@ color_t *color_add(color_t *dest, color_t *a, color_t *b)
 		dest = (color_t *) malloc(sizeof(dest));
 	}
 
-	dest->r = a->r + b->r;
-	dest->g = a->g + b->g;
-	dest->b = a->b + b->b;
+	unsigned int tmp = a->r + b->r;
+	dest->r = tmp > 255 ? 255 : tmp;
+
+	tmp = a->g + b->g;
+	dest->g = tmp > 255 ? 255 : tmp;
+
+	tmp = a->b + b->b;
+	dest->b = tmp > 255 ? 255 : tmp;
 
 	return dest;
 }
@@ -45,9 +50,14 @@ color_t *color_scale(color_t *dest, color_t *a, float b)
 		dest = (color_t *) malloc(sizeof(dest));
 	}
 
-	dest->r = a->r * b;
-	dest->g = a->g * b;
-	dest->b = a->b * b;
+	unsigned int tmp = a->r * b;
+	dest->r = tmp > 255 ? 255 : tmp;
+
+	tmp = a->g * b;
+	dest->g = tmp > 255 ? 255 : tmp;
+
+	tmp = a->b * b;
+	dest->b = tmp > 255 ? 255 : tmp;
 
 	return dest;
 }

@@ -27,11 +27,13 @@ object_t *add_sphere(space_t *s, vector_t *c, COORD_T r, material_t *m)
 	return o;
 }
 
-object_t *add_plane(space_t *s, vector_t *start, vector_t *dir)
+object_t *add_plane(space_t *s, vector_t *start, vector_t *dir, material_t *m)
 {
 	object_t *o = (object_t *) malloc(sizeof(object_t));
 
 	o->type = TYPE_PLANE;
+	o->m = m;
+
 	o->pl.start = start;
 	o->pl.norm = dir;
 
@@ -40,12 +42,13 @@ object_t *add_plane(space_t *s, vector_t *start, vector_t *dir)
 	return o;
 }
 
-light_t *add_light(space_t *s, vector_t *pos, color_t *defuse)
+light_t *add_light(space_t *s, vector_t *pos, color_t *defuse, color_t *specular)
 {
 	light_t *o = (light_t *) malloc(sizeof(light_t));
 
 	o->pos = pos;
 	o->defuse = defuse;
+	o->specular = specular;
 
 	if (s) {
 		o->next = s->lights;

@@ -1,8 +1,8 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 	
-#define COORD_T float
-#define ZERO_APROX 1e-5
+#define COORD_T double
+#define ZERO_APROX 1e-6
 
 typedef struct {
 	COORD_T x;
