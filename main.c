@@ -24,15 +24,15 @@ int main()
 	material_t m;
 	vector_set(&m.color, 1, 1, 1);
 	m.defuse = 0.0;
-	m.specular = 0.0;
+	m.specular = 0.5;
 	m.shine = 40;
 	m.reflective = 0.5;
 
 	material_t m2;
 	vector_set(&m2.color, 0.1, 1, 0.7);
 	m2.defuse = 1;
-	m2.specular = 0.0;
-	m2.shine = 40;
+	m2.specular = 0.7;
+	m2.shine = 10;
 	m2.reflective = 0.0;
 
 	material_t mpl;
