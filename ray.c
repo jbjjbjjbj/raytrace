@@ -148,6 +148,68 @@ object_t *ray_cast(space_t *s, ray_t *r, COORD_T *dist_ret, bool chk, COORD_T ch
 	return smallest;
 }
 
+static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *eye, vector_t *point)
+{
+	ray_t r;
+	r.start = point;
+
+	// Calculate normal vector
+	vector_t N;
+	obj_norm_at(o, &N, point);
+	
+	// And vector towards viewer
+	vector_t V;
+	vector_sub(&V, eye, point);
+
+	// Normalice it
+	vector_scale_inv(&V, &V, vector_len(&V));
+
+	// Cast light rays
+	light_t *light = s->lights;
+	while (light) {
+		vector_t l;
+		
+		// Calculate distance to light
+		vector_sub(&l, light->pos, point);
+		COORD_T d = vector_len(&l);
+
+		// Normalice
+		vector_scale_inv(&l, &l, vector_len(&l));
+
+		// Find obstacles
+		r.direction = &l;
+		object_t *obs = ray_cast(s, &r, NULL, true, d);
+		if (obs) {
+			light = light->next;
+			continue;
+		}
+		
+		// Calculate Deffuse part
+		color_t tmp;
+		COORD_T cl = vector_dot(&l, &N);
+		if (cl > 0) {
+			color_scale(&tmp, light->defuse, cl * o->m->defuse);
+			color_add(dest, &tmp, dest);
+		}
+
+		// calculate specular part. TODO implement blinn-phong
+		// Calculate R_m
+		vector_t R;
+		vector_scale(&R, &N, 2 * vector_dot(&l, &N));
+		vector_sub(&R, &R, &l);
+		
+		// Add it to the light
+		cl = 1 * vector_dot(&R, &V);
+		if (cl > 0) {
+			cl = pow(cl, o->m->shine);
+			color_scale(&tmp, light->specular, cl * o->m->specular);
+			color_add(dest, &tmp, dest);
+		}
+
+		light = light->next;
+	}
+}
+
 color_t *ray_trace(space_t *s, unsigned int x, unsigned int y)
 {
 	// Setup primary ray
@@ -166,70 +228,10 @@ color_t *ray_trace(space_t *s, unsigned int x, unsigned int y)
 	r.start = vector_scale(NULL, r.direction, dist);
 	vector_add(r.start, r.start, &s->view.position);
 
-	// Calculate normal vector
-	vector_t n;
-	obj_norm_at(o, &n, r.start);
-	
-	// And vector towards viewer
-	//printf("point: "); vector_print(r.start);
-	vector_t V;
-	vector_sub(&V, &s->view.position, r.start);
-	// Normalice it
-	vector_scale_inv(&V, &V, vector_len(&V));
-	//printf("V: "); vector_print(&V);
-
 	// Hit color
 	color_t *c = color_set(NULL, s->ambient.r, s->ambient.g, s->ambient.b);
 
-	// Cast light rays
-	light_t *light = s->lights;
-	while (light) {
-		vector_t l;
-		// Calculate distance to light
-		vector_sub(&l, light->pos, r.start);
-		COORD_T d = vector_len(&l);
-
-		vector_scale_inv(&l, &l, vector_len(&l));
-
-		// Find obstacles
-		if (print) printf("Starting\n");
-		r.direction = &l;
-		object_t *obs = ray_cast(s, &r, NULL, true, d);
-		if (obs) {
-			if (print)
-				printf("Light ray hit\n");
-
-			light = light->next;
-			continue;
-		}
-			if (print)
-				printf("Light ray went through\n");
-		
-		// Calculate Deffuse part
-		color_t tmp;
-		COORD_T cl = vector_dot(&l, &n);
-		if (cl > 0) {
-			color_scale(&tmp, light->defuse, cl * o->m->defuse);
-			color_add(c, &tmp, c);
-		}
-
-		// calculate specular part. TODO implement blinn-phong
-		// Calculate R_m
-		vector_t R;
-		vector_scale(&R, &n, 2 * vector_dot(&l, &n));
-		vector_sub(&R, &R, &l);
-		//printf("R: ");vector_print(&R);
-		
-		// Add it to the light
-		cl = 1 * vector_dot(&R, &V);
-		if (cl > 0) {
-			cl = pow(cl, o->m->shine);
-			color_scale(&tmp, light->specular, cl * o->m->specular);
-			color_add(c, &tmp, c);
-		}
-
-		light = light->next;
-	}
+	ray_calc_light(s, c, o, &s->view.position, r.start);
 
 	color_scale_vector(c, c, &o->m->color);
 

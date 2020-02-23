@@ -24,11 +24,12 @@ int main()
 	material_t m;
 	vector_set(&m.color, 0, 1, 0);
 	m.defuse = 1;
-	m.specular = 0.7;
+	m.specular = 0.3;
 	m.shine = 20;
 
 	material_t mpl;
-	vector_set(&mpl.color, 0, 0.396, 0.7019);
+	//vector_set(&mpl.color, 0, 0.396, 0.7019);
+	vector_set(&mpl.color, 1, 1, 1);
 	mpl.defuse = 1;
 	mpl.specular = 0.3;
 	mpl.shine = 20;
@@ -45,7 +46,8 @@ int main()
 	add_sphere(&s, vector_set(NULL, -6, -3, 7), 3, &m);
 	//add_sphere(&s, vector_set(NULL, 10, 0, 5), 5);
 	add_plane(&s, vector_set(NULL, 0, 0, 2), vector_set(NULL, 0, 0, 1), &mpl);
-	add_light(&s, vector_set(NULL, 10, 0, 20), color_set(NULL, 150, 150, 150), color_set(NULL, 150, 150, 150));
+	add_light(&s, vector_set(NULL, 10, 0, 20), color_set(NULL, 255, 255, 255), color_set(NULL, 150, 150, 150));
+	//add_light(&s, vector_set(NULL, 0, 10, 20), color_set(NULL, 255, 255, 255), color_set(NULL, 150, 150, 150));
 
 	pgm_write_header(stdout, TESTW, TESTH);
 	for (int y = TESTH; y; y--) {
