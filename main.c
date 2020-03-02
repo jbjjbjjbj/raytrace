@@ -24,7 +24,7 @@ int main()
 	material_t m;
 	vector_set(&m.color, 1, 1, 1);
 	m.defuse = 0.0;
-	m.specular = 0.5;
+	m.specular = 0.0;
 	m.shine = 40;
 	m.reflective = 0.5;
 
