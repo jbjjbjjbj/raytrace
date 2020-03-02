@@ -10,9 +10,6 @@
 #define TESTW 1000
 #define TESTH 1000
 
-color_t back = {255, 255, 255};
-int print = 0;
-
 int main()
 {
 	//printf("Starting\n");
@@ -20,6 +17,9 @@ int main()
 	s.objects = NULL;
 	s.lights = NULL;
 	color_set(&s.ambient, 25, 25, 25);
+	// Currently havin issues with white background
+	// color_set(&s.back, 255, 255, 255);
+	color_set(&s.back, 0, 0, 0);
 
 	material_t m;
 	vector_set(&m.color, 1, 1, 1);
@@ -41,7 +41,7 @@ int main()
 	mpl.defuse = 1;
 	mpl.specular = 0.0;
 	mpl.shine = 50;
-	mpl.reflective = 0;
+	mpl.reflective = 0.0;
 
 	vector_set(&s.view.position, 0, 14, 8);
 	vector_set(&s.view.target, 0, 0, 0);
@@ -61,19 +61,12 @@ int main()
 	pgm_write_header(stdout, TESTW, TESTH);
 	for (int y = TESTH; y; y--) {
 		for (int x = TESTW; x; x--) {
-			if (0 && y <= 500) {
-				printf("Lets go");
-				print = 1;
-			}
 			color_t *c = ray_trace(&s, x, y);
 
 			if (c) {
 				pgm_write_pixel(stdout, c);
-			} else {
-				pgm_write_pixel(stdout, &back);
-			}
+			} 
 			free(c);
-			print = 0;
 		}
 	}
 	

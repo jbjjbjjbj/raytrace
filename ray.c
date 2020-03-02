@@ -5,8 +5,6 @@
 
 #include "ray.h"
 
-extern int print;
-
 // https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
 // http://viclw17.github.io/2018/07/16/raytracing-ray-sphere-intersection/
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
@@ -29,9 +27,6 @@ COORD_T ray_intersect_sphere(sphere_t *s, ray_t *ray, bool skip_dist)
         return -1;
     }
 	if (skip_dist) {
-		if (print) {
-			printf("sph dist: skip\n");
-		}
 		return 1;
 	}
 
@@ -56,9 +51,6 @@ COORD_T ray_intersect_sphere(sphere_t *s, ray_t *ray, bool skip_dist)
 	if (x0 < ZERO_APROX) {
 		return -1;
 	}
-	if (print) {
-		printf("sph dist: %f\n", x0);
-	}
 
 	return x0;
 }
@@ -72,15 +64,9 @@ COORD_T ray_intersect_plane(plane_t *p, ray_t *ray, bool skip_dist)
 	
 	// Take care of rounding errors
 	if (nr < ZERO_APROX && nr > -ZERO_APROX) {
-		if (print) {
-			printf("Ohh no");
-		}
 		return -1;
 	}
 	if (skip_dist) {
-		if (print) {
-			printf("pdist: skip\n");
-		}
 		return 1;
 	}
 
@@ -90,9 +76,6 @@ COORD_T ray_intersect_plane(plane_t *p, ray_t *ray, bool skip_dist)
 	vector_sub(&tmp, &tmp, ray->start);
 
 	COORD_T t = vector_dot(&tmp, p->norm) / nr;
-	if (print) {
-		printf("pdist: %f\n", t);
-	}
 	return t;
 }
 
@@ -119,9 +102,6 @@ object_t *ray_cast(space_t *s, ray_t *r, COORD_T *dist_ret, bool chk, COORD_T ch
 
 	while (o) {
 		COORD_T d = ray_intersect(o, r, false);
-
-		if (print)
-			printf("Distance: %f\n", d);
 
 		if (d > ZERO_APROX) {
 			if (chk && chk_dist > d) {
@@ -215,7 +195,8 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 
 	object_t *o = ray_cast(s, ray, &dist, false, 0);
 	if (!o) {
-		return 1;
+		color_add(&c, &c, &s->back);
+		goto exit;
 	}
 
 	vector_t rdir, rstart;
@@ -242,8 +223,12 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 		ray_trace_recur(s, &c, &r, hop+1, o->m->reflective);
 	}
 
+
 	// Scale by the objects own color.
 	color_scale_vector(&c, &c, &o->m->color);
+
+exit:
+	// Add it to the result
 	color_scale(&c, &c, scale);
 	color_add(dest, dest, &c);
 
@@ -262,11 +247,7 @@ color_t *ray_trace(space_t *s, unsigned int x, unsigned int y)
 	color_t *c = color_set(NULL, s->ambient.r, s->ambient.g, s->ambient.b);
 
 	// Run the recursive ray trace
-	int status = ray_trace_recur(s, c, &r, 0, 1);
-	if (status) {
-		free(c);
-		return NULL;
-	}
+	ray_trace_recur(s, c, &r, 0, 1);
 
 	return c;
 }
