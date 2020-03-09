@@ -25,15 +25,15 @@ int main()
 	vector_set(&m.color, 1, 1, 1);
 	m.defuse = 0.0;
 	m.specular = 0.0;
-	m.shine = 40;
+	m.shine = 80;
 	m.reflective = 0.5;
 
 	material_t m2;
 	vector_set(&m2.color, 0.1, 1, 0.7);
-	m2.defuse = 1;
-	m2.specular = 0.7;
-	m2.shine = 10;
-	m2.reflective = 0.0;
+	m2.defuse = 0.9;
+	m2.specular = 1;
+	m2.shine = 60;
+	m2.reflective = 0.1;
 
 	material_t mpl;
 	//vector_set(&mpl.color, 0, 0.396, 0.7019);
@@ -43,19 +43,19 @@ int main()
 	mpl.shine = 50;
 	mpl.reflective = 0.0;
 
-	vector_set(&s.view.position, 0, 14, 8);
-	vector_set(&s.view.target, 0, 0, 0);
+	vector_set(&s.view.position, 0, 14, 5);
+	vector_set(&s.view.target, 0, 0, 5);
 	s.view.width = TESTW;
 	s.view.height = TESTH;
 
 	viewpoint_init(&s.view);
 	
 	// Setup plane
-	add_sphere(&s, vector_set(NULL, 3, -1, 5), 5, &m);
-	add_sphere(&s, vector_set(NULL, 3, 7, 3), 2, &m2);
+	add_sphere(&s, vector_set(NULL, 0, 4, 5), 5, &m2);
+	add_sphere(&s, vector_set(NULL, 8, 8, 3), 2, &m2);
 	add_plane(&s, vector_set(NULL, 0, 0, 2), vector_set(NULL, 0, 0, 1), &mpl);
-	add_plane(&s, vector_set(NULL, 0, -20, 0), vector_set(NULL, 0, 1, 0), &mpl);
-	add_light(&s, vector_set(NULL, 20, 0, 20), color_set(NULL, 255, 255, 255), color_set(NULL, 150, 150, 150));
+	//add_plane(&s, vector_set(NULL, 0, -20, 0), vector_set(NULL, 0, 1, 0), &mpl);
+	add_light(&s, vector_set(NULL, 20, 10, 30), color_set(NULL, 255, 255, 255), color_set(NULL, 150, 150, 150));
 	//add_light(&s, vector_set(NULL, 0, 10, 20), color_set(NULL, 255, 255, 255), color_set(NULL, 150, 150, 150));
 
 	pgm_write_header(stdout, TESTW, TESTH);
