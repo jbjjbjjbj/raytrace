@@ -61,7 +61,7 @@ int main()
 	pgm_write_header(stdout, TESTW, TESTH);
 	for (int y = TESTH; y; y--) {
 		for (int x = TESTW; x; x--) {
-			color_t *c = ray_trace(&s, x, y);
+			color_t *c = ray_trace(&s, x, y, 8);
 
 			if (c) {
 				pgm_write_pixel(stdout, c);

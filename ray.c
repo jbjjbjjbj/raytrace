@@ -235,19 +235,46 @@ exit:
 	return 0;
 }
 
-color_t *ray_trace(space_t *s, unsigned int x, unsigned int y)
+color_t *ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples)
 {
 	// Init return color. Will be accumilated with all the detected light.
-	color_t *c = color_set(NULL, s->ambient.r, s->ambient.g, s->ambient.b);
+	color_t *c = color_set(NULL, 0, 0, 0);
 
 	// Setup primary ray
 	ray_t r;
 	r.start = &s->view.position;
 	r.direction = vector_copy(NULL, NULL);
-	viewpoint_ray(&s->view, r.direction, x, y);
 
-	// Run the recursive ray trace
-	ray_trace_recur(s, c, &r, 0, 1);
+	// Multiple samples for antialias
+	// TODO better distribution of antialias probes
+	for (int i = 0; i < samples; i++) {
+		color_t ctmp;
+		color_set(&ctmp, 0, 0, 0);
+		//memset(&ctmp, 0, sizeof(color_t));
+		
+		// Multiple samples inside same pixel
+		COORD_T tmp = (COORD_T) i/ (COORD_T) samples;
+		viewpoint_ray(&s->view, r.direction, x + tmp, y + tmp);
+
+		// Run the recursive ray trace
+		ray_trace_recur(s, &ctmp, &r, 0, 1);
+
+		// Color_add will not go above 1. In this case we don't want that.
+		c->r += ctmp.r; c->g += ctmp.g; c->b += ctmp.b;
+
+	}
+	//printf("COlor before devide %f, %f, %f\n", c->r, c->g, c->b);
+
+	free(r.direction);
+
+	// Take the median
+	if (samples > 1) {
+		// Same as deviding by samples
+		color_scale(c, c, 1.0/ (COORD_T) samples);
+	}
+
+	// Add ambient
+	color_add(c, c, &s->ambient);
 
 	return c;
 }
