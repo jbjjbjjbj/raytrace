@@ -24,5 +24,5 @@ typedef struct {
 // Todo handle initial setup
 void viewpoint_init(viewpoint_t *view);
 
-void viewpoint_ray(viewpoint_t *view, vector_t *r, unsigned x, unsigned y);
+void viewpoint_ray(viewpoint_t *view, vector_t *r, COORD_T x, COORD_T y);
 #endif

@@ -237,14 +237,14 @@ exit:
 
 color_t *ray_trace(space_t *s, unsigned int x, unsigned int y)
 {
+	// Init return color. Will be accumilated with all the detected light.
+	color_t *c = color_set(NULL, s->ambient.r, s->ambient.g, s->ambient.b);
+
 	// Setup primary ray
 	ray_t r;
 	r.start = &s->view.position;
 	r.direction = vector_copy(NULL, NULL);
 	viewpoint_ray(&s->view, r.direction, x, y);
-
-	// Init return color. Will be accumilated with all the detected light.
-	color_t *c = color_set(NULL, s->ambient.r, s->ambient.g, s->ambient.b);
 
 	// Run the recursive ray trace
 	ray_trace_recur(s, c, &r, 0, 1);

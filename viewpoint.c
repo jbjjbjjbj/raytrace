@@ -47,7 +47,7 @@ void viewpoint_init(viewpoint_t *view)
 
 // Calculate ray for viewport w, h
 // https://en.wikipedia.org/wiki/Ray_tracing_(graphics)
-void viewpoint_ray(viewpoint_t *view, vector_t *r, unsigned x, unsigned y)
+void viewpoint_ray(viewpoint_t *view, vector_t *r, COORD_T x, COORD_T y)
 {
 	// Calculate ray vector
 	vector_copy(r, &view->blc);
