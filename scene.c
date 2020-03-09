@@ -60,6 +60,13 @@ light_t *add_light(space_t *s, vector_t *pos, color_t *defuse, color_t *specular
 	return o;
 }
 
+void material_set_phong(material_t *m, COORD_T defuse, COORD_T specular, unsigned int shine) {
+	m->light_type = LIGHT_PHONG;
+	m->phong.defuse = defuse;
+	m->phong.specular = specular;
+	m->phong.shine = shine;
+}
+
 void obj_norm_at(object_t *o, vector_t *dest, vector_t *point)
 {
 	switch(o->type) {

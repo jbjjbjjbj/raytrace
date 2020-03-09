@@ -129,7 +129,9 @@ object_t *ray_cast(space_t *s, ray_t *r, COORD_T *dist_ret, bool chk, COORD_T ch
 	return smallest;
 }
 
-static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point)
+// Calculates the phong lightning at point from position eye.
+// N is the normal vector at object o
+static void light_phong(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point)
 {
 	ray_t r;
 	r.start = point;
@@ -142,8 +144,7 @@ static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *N, 
 	vector_scale_inv(&V, &V, vector_len(&V));
 
 	// Cast light rays
-	light_t *light = s->lights;
-	while (light) {
+	for (light_t *light = s->lights; light; light = light->next) {
 		vector_t l;
 		
 		// Calculate distance to light
@@ -157,7 +158,6 @@ static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *N, 
 		r.direction = &l;
 		object_t *obs = ray_cast(s, &r, NULL, true, d);
 		if (obs) {
-			light = light->next;
 			continue;
 		}
 		
@@ -165,7 +165,7 @@ static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *N, 
 		color_t tmp;
 		COORD_T cl = vector_dot(&l, N);
 		if (cl > 0) {
-			color_scale(&tmp, light->defuse, cl * o->m->defuse);
+			color_scale(&tmp, light->defuse, cl * o->m->phong.defuse);
 			color_add(dest, &tmp, dest);
 		}
 
@@ -178,12 +178,40 @@ static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *N, 
 		// Add it to the light
 		cl = 1 * vector_dot(&R, &V);
 		if (cl > 0) {
-			cl = pow(cl, o->m->shine);
-			color_scale(&tmp, light->specular, cl * o->m->specular);
+			cl = pow(cl, o->m->phong.shine);
+			color_scale(&tmp, light->specular, cl * o->m->phong.specular);
 			color_add(dest, &tmp, dest);
 		}
 
-		light = light->next;
+	}
+}
+
+static void light_lambert(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point)
+{
+	vector_t l;
+	ray_t r = {start: point, direction: &l};
+
+	for (light_t *light = s->lights; light; light = light->next) {
+		// Calculate direction of lights
+		vector_sub(&l, light->post, point);
+		COORD_T d = vector_len(&l);
+		
+		// Normalize
+		vector_scale_inv(&l, &l, vector_len(&l));
+
+		// Find obstracles
+		object_t *obj = ray_cast(s, &r, NULL, true, d);
+		if (obj) {
+			continue;
+		}
+
+		// Calculate lambert stuff
+		COORD_T cl = vector_dot(&l, N);
+		if (cl > 0) {
+			color_scale(&tmp, light->defuse, cl * o->m->phong.defuse);
+			color_add(dest, &tmp, dest);
+		}
+		`
 	}
 }
 
@@ -202,17 +230,19 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 	vector_t rdir, rstart;
 	ray_t r = {start: &rstart, direction: &rdir};
 
+	// Calculate hit point
 	vector_scale(r.start, ray->direction, dist);
 	vector_add(r.start, r.start, ray->start);
 
-	// Calculate normal vector
+	// Calculate normal vector at object
 	vector_t N;
 	obj_norm_at(o, &N, r.start);
 
 	// Check if we should calculate light
-	if (o->m->defuse + o->m->specular > ZERO_APROX) {
-		// Add all light hitting o at r.start to c
-		ray_calc_light(s, &c, o, &N, ray->start, r.start);
+	switch (o->m->light_type) {
+		case LIGHT_PHONG:
+			light_phong(s, &c, o, &N, ray->start, r.start);
+		
 	}
 
 	// Calculate reflection vector

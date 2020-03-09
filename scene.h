@@ -11,6 +11,10 @@
 #define TYPE_SPHERE 1
 #define TYPE_PLANE 2
 
+#define LIGHT_LAMBERT 0
+#define LIGHT_PHONG 1
+#define LIGHT_NONE 2
+
 typedef struct {
 	vector_t *center;
 	COORD_T radius;
@@ -33,9 +37,14 @@ typedef struct {
 	vector_t color;
 
 	// Light properties
-	COORD_T defuse;
-	COORD_T specular;
-	unsigned int shine;
+	unsigned int light_type;
+	union {
+		struct phong_s {
+			COORD_T defuse;
+			COORD_T specular;
+			unsigned int shine;
+		} phong;
+	};
 	
 	// Reflective properties
 	COORD_T reflective;
@@ -67,6 +76,8 @@ typedef struct {
 object_t *add_sphere(space_t *s, vector_t *c, COORD_T r, material_t *m);
 object_t *add_plane(space_t *s, vector_t *start, vector_t *dir, material_t *m);
 light_t *add_light(space_t *s, vector_t *pos, color_t *defuse, color_t *specular);
+
+void material_set_phong(material_t *m, COORD_T defuse, COORD_T specular, unsigned int shine);
 
 void obj_norm_at(object_t *o, vector_t *dest, vector_t *point);
 
