@@ -187,6 +187,13 @@ static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *N, 
 	}
 }
 
+// Calculates the environmental light. Pretty slow
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing
+static void light_environment(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point) 
+{
+
+}
+
 int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T scale)
 {
 	COORD_T dist;

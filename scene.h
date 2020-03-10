@@ -62,6 +62,12 @@ typedef struct {
 
 	color_t ambient;
 	color_t back;
+
+	// Environment light
+	// TODO make more general
+	// Slows things down alot
+	bool env_enabled;
+	color_t env_color;
 } space_t;
 
 object_t *add_sphere(space_t *s, vector_t *c, COORD_T r, material_t *m);
