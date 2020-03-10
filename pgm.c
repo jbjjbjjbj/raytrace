@@ -15,7 +15,7 @@ int pgm_write_pixel(FILE *fp, color_t *c)
 	return fprintf(fp, "%.0lf %.0lf %.0lf\n", c->r * COLOR_MAX, c->g * COLOR_MAX, c->b * COLOR_MAX);
 }
 
-color_t *color_set(color_t *c, uint8_t r, uint8_t g, uint8_t b)
+color_t *color_set(color_t *c, COORD_T r, COORD_T g, COORD_T b)
 {
 	if (!c) {
 		c = (color_t *) malloc(sizeof(color_t));

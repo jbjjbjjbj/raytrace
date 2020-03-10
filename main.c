@@ -55,13 +55,13 @@ int main()
 	add_sphere(&s, vector_set(NULL, 8, 8, 3), 2, &m2);
 	add_plane(&s, vector_set(NULL, 0, 0, 2), vector_set(NULL, 0, 0, 1), &mpl);
 	//add_plane(&s, vector_set(NULL, 0, -20, 0), vector_set(NULL, 0, 1, 0), &mpl);
-	add_light(&s, vector_set(NULL, 20, 10, 30), color_set(NULL, 1, 1, 1), color_set(NULL, 0.5, 0.5, 0.5));
-	//add_light(&s, vector_set(NULL, 0, 10, 20), color_set(NULL, 255, 255, 255), color_set(NULL, 150, 150, 150));
+	add_light(&s, vector_set(NULL, 20, 10, 30), color_set(NULL, 0.2, 0.2, 0.2), color_set(NULL, 0.5, 0.5, 0.5));
+	add_light(&s, vector_set(NULL, 0, 10, 20), color_set(NULL, 0.5, 0.5, 0.5), color_set(NULL, 0.5, 0.5, 0.5));
 
 	pgm_write_header(stdout, TESTW, TESTH);
 	for (int y = TESTH; y; y--) {
 		for (int x = TESTW; x; x--) {
-			color_t *c = ray_trace(&s, x, y, 8);
+			color_t *c = ray_trace(&s, x, y, 2);
 
 			if (c) {
 				pgm_write_pixel(stdout, c);
