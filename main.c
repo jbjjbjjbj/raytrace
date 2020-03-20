@@ -19,7 +19,9 @@ int main()
 	color_set(&s.ambient, 0.09, 0.09, 0.09);
 	// Currently havin issues with white background
 	// color_set(&s.back, 255, 255, 255);
-	color_set(&s.back, 0, 0, 0);
+	color_set(&s.back, 0.8, 0.8, 0.8);
+	color_set(&s.env_color, 0.1, 0.1, 0.1);
+	s.env_samples = 256;
 
 	material_t m;
 	vector_set(&m.color, 1, 1, 1);
@@ -59,6 +61,11 @@ int main()
 	add_light(&s, vector_set(NULL, 0, 10, 20), color_set(NULL, 0.5, 0.5, 0.5), color_set(NULL, 0.5, 0.5, 0.5));
 
 	pgm_write_header(stdout, TESTW, TESTH);
+
+	// Height percentage
+	unsigned percentstep = TESTH / 100;
+	unsigned percent = 0;
+
 	for (int y = TESTH; y; y--) {
 		for (int x = TESTW; x; x--) {
 			color_t *c = ray_trace(&s, x, y, 2);
@@ -67,6 +74,11 @@ int main()
 				pgm_write_pixel(stdout, c);
 			} 
 			free(c);
+
+		}
+
+		if (y % percentstep == 0) {
+			fprintf(stderr, "%d%\n", percent++);
 		}
 	}
 	

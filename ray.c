@@ -5,6 +5,8 @@
 
 #include "ray.h"
 
+#define PI 3.14159265359
+
 // https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
 // http://viclw17.github.io/2018/07/16/raytracing-ray-sphere-intersection/
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
@@ -104,7 +106,7 @@ object_t *ray_cast(space_t *s, ray_t *r, COORD_T *dist_ret, bool chk, COORD_T ch
 		COORD_T d = ray_intersect(o, r, false);
 
 		if (d > ZERO_APROX) {
-			if (chk && chk_dist > d) {
+			if (chk && ( chk_dist > d || chk_dist == 0)) {
 				if (dist_ret) {
 					*dist_ret = d;
 				}
@@ -129,7 +131,7 @@ object_t *ray_cast(space_t *s, ray_t *r, COORD_T *dist_ret, bool chk, COORD_T ch
 	return smallest;
 }
 
-static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point)
+static void direct_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point)
 {
 	ray_t r;
 	r.start = point;
@@ -187,10 +189,70 @@ static void ray_calc_light(space_t *s, color_t *dest, object_t *o, vector_t *N, 
 	}
 }
 
-// Calculates the environmental light. Pretty slow
-// https://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing
-static void light_environment(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point) 
+// Calculates the global illumination. Pretty slow
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing/global-illumination-path-tracing-practical-implementation
+static void env_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point) 
 {
+	// Create new coordinate system where N is up. To do this we need two more vectors for the other axises.
+	// Create the 2. by setting x or y to 0
+	vector_t Nt;
+	if (N->x > N->y) {
+		vector_set(&Nt, N->z, 0, -N->x);
+	} else {
+		vector_set(&Nt, 0, -N->z, N->y);
+	}
+	// Normalice
+	vector_scale_inv(&Nt, &Nt, vector_len(&Nt));
+
+	// Create the 3. axis by taking the cross of the other
+	vector_t Nb;
+	vector_cross(&Nb, N, &Nt);
+
+	// Prepare ray
+	ray_t r;
+	r.start = point;
+
+	// Tmp color for accumilating colors
+	color_t acc;
+	color_set(&acc, 0, 0, 0);
+
+	for (unsigned i = 0; i < s->env_samples; i++) {
+		// Do the monte carlo random distribution thing from the article
+		COORD_T r1 = (COORD_T) rand() / RAND_MAX;
+		COORD_T r2 = (COORD_T) rand() / RAND_MAX;
+
+		COORD_T sinTheta = sqrt(1 - r1 * r1);
+		COORD_T phi = 2 * PI * r2;
+
+		// Calculate the random direction vector
+		vector_t randdir;
+		vector_set(&randdir, sinTheta * cos(phi), r1, sinTheta * sin(phi));
+
+		// Convert to world cordinates using the calculated N vectors. 
+		vector_set(&randdir, randdir.x * Nb.x + randdir.y * N->x + randdir.z * Nt.x,
+				         randdir.x * Nb.y + randdir.y * N->y + randdir.z * Nt.y,
+						 randdir.x * Nb.z + randdir.y * N->z + randdir.z * Nt.z);
+
+		// Check the direction for obstacles
+		r.direction = &randdir;
+		object_t *obs = ray_cast(s, &r, NULL, true, 0);
+		if (obs) {
+			// If we hit something don't add the light
+			continue;
+		}
+
+		// Add the light together after scaling it
+		color_t tmp;
+		color_scale(&tmp, &s->env_color, r1);
+
+		acc.r += tmp.r; acc.g += tmp.g; acc.b += tmp.b;
+	}
+
+	// Devide by number of samples and pdf
+	color_scale(&acc, &acc, ((COORD_T) 1/ s->env_samples) * (2 * PI));
+
+	// Add to dest
+	color_add(dest, dest, &acc);
 
 }
 
@@ -219,7 +281,12 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 	// Check if we should calculate light
 	if (o->m->defuse + o->m->specular > ZERO_APROX) {
 		// Add all light hitting o at r.start to c
-		ray_calc_light(s, &c, o, &N, ray->start, r.start);
+		direct_light(s, &c, o, &N, ray->start, r.start);
+	}
+	
+	// Calculate environmental light
+	if (s->env_samples) {
+		env_light(s, &c, o, &N, ray->start, r.start);
 	}
 
 	// Calculate reflection vector

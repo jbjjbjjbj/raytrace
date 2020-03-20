@@ -66,7 +66,7 @@ typedef struct {
 	// Environment light
 	// TODO make more general
 	// Slows things down alot
-	bool env_enabled;
+	unsigned env_samples;
 	color_t env_color;
 } space_t;
 
