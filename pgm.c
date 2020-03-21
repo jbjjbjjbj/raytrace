@@ -31,7 +31,7 @@ color_t *color_set(color_t *c, COORD_T r, COORD_T g, COORD_T b)
 color_t *color_add(color_t *dest, color_t *a, color_t *b)
 {
 	if (!dest) {
-		dest = (color_t *) malloc(sizeof(dest));
+		dest = (color_t *) malloc(sizeof(color_t));
 	}
 
 	COORD_T tmp = a->r + b->r;
@@ -49,7 +49,7 @@ color_t *color_add(color_t *dest, color_t *a, color_t *b)
 color_t *color_scale(color_t *dest, color_t *a, COORD_T b)
 {
 	if (!dest) {
-		dest = (color_t *) malloc(sizeof(dest));
+		dest = (color_t *) malloc(sizeof(color_t));
 	}
 
 	COORD_T tmp = a->r * b;
@@ -67,7 +67,7 @@ color_t *color_scale(color_t *dest, color_t *a, COORD_T b)
 color_t *color_scale_vector(color_t *dest, color_t *a, vector_t *v)
 {
 	if (!dest) {
-		dest = (color_t *) malloc(sizeof(dest));
+		dest = (color_t *) malloc(sizeof(color_t));
 	}
 
 	dest->r = a->r * v->x;
