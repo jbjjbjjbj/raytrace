@@ -4,7 +4,7 @@ CC=gcc
 CFLAGS=-ggdb
 
 # We need math
-LDFLAGS=-lm
+LDFLAGS=-lm -lpthread
 
 # Output and build options
 BINARY=raytrace

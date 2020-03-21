@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include "vector.h"
 #include "ray.h"
@@ -10,7 +11,23 @@
 #define TESTW 1000
 #define TESTH 1000
 
+#define PERCENTSTEP (TESTH / 100)
+
+#define WORKERS 4
+
+void *worker_func(void *arg);
+
+typedef struct {
+	unsigned id;
+	color_t *image;
+} office_t;
+
+// Height percentage, workers take turn at printing to it. This maaaay be a bad idea
+unsigned percent = 0;
+pthread_mutex_t percentlock;
+
 char container[ CONTAINER_SIZE(5, 4, 1) ];
+container_t *cont = (container_t *) container;
 
 // Implement random 
 COORD_T ray_rand(void *seed)
@@ -20,8 +37,6 @@ COORD_T ray_rand(void *seed)
 
 int main()
 {
-
-	container_t *cont = (container_t *) container;
 	container_init(cont, 5, 4, 1);
 	
 	// Init space_t
@@ -62,13 +77,11 @@ int main()
 	m2->reflective = 1;
 
 	material_t *mpl = add_material(cont);
-	//vector_set(&mpl.color, 0, 0.396, 0.7019);
 	vector_set(&mpl->color, 1, 1, 1);
 	mpl->defuse = 1;
 	mpl->specular = 0.0;
 	mpl->shine = 50;
 	mpl->reflective = 0.0;
-
 
 	viewpoint_init(&s->view);
 	
@@ -104,25 +117,86 @@ int main()
 
 	pgm_write_header(stdout, TESTW, TESTH);
 
-	// Height percentage
-	unsigned percentstep = TESTH / 100;
-	unsigned percent = 0;
-	int seed;
+	// Create image array. Not as memory efficient but much simpler when multiprocessing
+	color_t *image = malloc( sizeof(color_t) * TESTW * TESTH);
+	if (!image) {
+		fprintf(stderr, "Could not allocate image array");	
+		exit(1);
+	}
 
-	for (int y = TESTH; y; y--) {
-		for (int x = TESTW; x; x--) {
-			// Random seed
-			seed = x * y;
-			color_t c;
-			ray_trace(&cont->space, x, y, 2, &c, &seed);
+	if (pthread_mutex_init(&percentlock, NULL)) {
+		fprintf(stderr, "Could not percent lock\n");
+		exit(1);
+	}
 
-			pgm_write_pixel(stdout, &c);
+	// Hire the workers
+	pthread_t workers[WORKERS];
+	for (int i = 0; i < WORKERS; i++) {
+		office_t *office = malloc(sizeof(office_t));
+		office->id = i;
+		office->image = image;
 
-		}
-
-		if (y % percentstep == 0) {
-			fprintf(stderr, "%d%\n", percent++);
+		// Start them and show them their office(chunk in the array in this case :-D)
+		int rc = pthread_create(&workers[i], NULL, worker_func, office);
+		if (rc) {
+			fprintf(stderr, "Could not create worker %d\nsorry\n", i);
+			exit(1);
 		}
 	}
+
+	// Wait for the threads to finish and print as we go
+	for (int i = 0; i < WORKERS; i++) {
+		pthread_join(workers[i], NULL);
+		
+	}
+
+	// Print the stuff the worker was responsable for.
+	for (int y = 0; y < TESTH; y++) {
+		for(int x = 0; x < TESTW; x++) {
+			pgm_write_pixel(stdout, &image[ y  * TESTW + x]);
+		}
+	}
+
+	free(image);
 	
+}
+
+void *worker_func(void *arg) {
+	// Organize our office
+	office_t *office = (office_t *) arg;
+
+	// Timing
+	double rowtime = 0;
+	unsigned count = 0;
+	int seed;
+
+	// Start working
+	for (int y = office->id; y < TESTH; y += WORKERS) {
+		// Start time
+		clock_t t = clock();
+		count++;
+
+		for (int x = 0; x < TESTW; x++) {
+			color_t *c = &office->image[ y * TESTW + x ];
+			//color_t c;
+			seed = x * y;
+			ray_trace(&cont->space, TESTW - x, TESTH - y, 2, c, &seed);
+		}
+
+		// Time stop
+		t = clock() - t;
+		rowtime += ((double)t)/CLOCKS_PER_SEC; // in seconds
+
+		if (y % PERCENTSTEP == 0) {
+			// Unlock the thingy
+			pthread_mutex_lock(&percentlock);	
+			fprintf(stderr, "%d%\n", percent++);
+			pthread_mutex_unlock(&percentlock);	
+		}
+	}
+
+	fprintf(stderr, "Mean row time %lf over %d rounds\n", rowtime / count, count);
+
+	//free(office);
+	pthread_exit(NULL);
 }
