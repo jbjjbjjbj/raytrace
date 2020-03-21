@@ -24,11 +24,14 @@ $(BUILD_DIR)/%.o: %.c
 $(BINARY): $(OBJ)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-.PHONY: run show clean
+.PHONY: render run show clean
 
 # This will also generate the image
-run: $(BINARY)
+render: $(BINARY)
 	./$(BINARY) | convert - test.png
+
+run: $(BINARY)
+	./$(BINARY)
 
 show: run
 	xdg-open test.png
