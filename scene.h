@@ -11,6 +11,8 @@
 #define TYPE_SPHERE 1
 #define TYPE_PLANE 2
 
+#define CONTAINER_SIZE(objs, mats, ligs) (sizeof(container_t) + objs * sizeof(object_t) + ligs * sizeof(light_t))
+
 typedef struct {
 	vector_t *center;
 	COORD_T radius;
@@ -57,6 +59,7 @@ typedef struct object_s{
 
 typedef struct {
 	viewpoint_t view;
+	
 	object_t *objects;
 	light_t *lights;
 
@@ -70,9 +73,38 @@ typedef struct {
 	color_t env_color;
 } space_t;
 
-object_t *add_sphere(space_t *s, vector_t *c, COORD_T r, material_t *m);
-object_t *add_plane(space_t *s, vector_t *start, vector_t *dir, material_t *m);
-light_t *add_light(space_t *s, vector_t *pos, color_t *defuse, color_t *specular);
+// Contains materials, space, objects and lights. Made to keep it all together.
+// They will still be linked list, but close together.
+typedef struct {
+	space_t space;
+
+	// Number of objects
+	unsigned obj_index;
+	unsigned mat_index;
+	unsigned lig_index;
+
+	// Number of objects that will fit.
+	unsigned obj_cap;
+	unsigned mat_cap;
+	unsigned lig_cap;
+
+	// Memory blob
+	// Contains objects -> materials -> lights
+	uint8_t content[0];
+} container_t;
+
+
+// Initialice container in buffer c. Should be big enough for the whole scene.
+// Use the container_size to calculate the needed space.
+// Leave c at NULL to allocate container
+container_t *container_init(container_t *c, unsigned objs, unsigned mats, unsigned ligs);
+
+space_t *container_prepare_space(container_t *c);
+
+object_t *add_sphere(container_t *cont, vector_t *c, COORD_T r, material_t *m);
+object_t *add_plane(container_t *cont, vector_t *start, vector_t *dir, material_t *m);
+light_t *add_light(container_t *cont, vector_t *pos, color_t *defuse, color_t *specular);
+material_t *add_material(container_t *cont);
 
 void obj_norm_at(object_t *o, vector_t *dest, vector_t *point);
 
