@@ -7,4 +7,4 @@ It's my first time playing with 2d and 3d image generation.
 
 Here are some of the latest pictures generated.
 
-![Test picture](/raytrace/plain/test.png)
+![Test picture](/raytrace/plain/test.png?h=image)
