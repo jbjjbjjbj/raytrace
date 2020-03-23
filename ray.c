@@ -191,7 +191,7 @@ static void direct_light(space_t *s, color_t *dest, object_t *o, vector_t *N, ve
 
 // Calculates the global illumination. Pretty slow
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing/global-illumination-path-tracing-practical-implementation
-static void env_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point) 
+static void env_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *point, void *seed) 
 {
 	// Create new coordinate system where N is up. To do this we need two more vectors for the other axises.
 	// Create the 2. by setting x or y to 0
@@ -218,8 +218,8 @@ static void env_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vecto
 
 	for (unsigned i = 0; i < s->env_samples; i++) {
 		// Do the monte carlo random distribution thing from the article
-		COORD_T r1 = (COORD_T) rand() / RAND_MAX;
-		COORD_T r2 = (COORD_T) rand() / RAND_MAX;
+		COORD_T r1 = ray_rand(seed);
+		COORD_T r2 = ray_rand(seed);
 
 		COORD_T sinTheta = sqrt(1 - r1 * r1);
 		COORD_T phi = 2 * PI * r2;
@@ -256,7 +256,7 @@ static void env_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vecto
 
 }
 
-int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T scale)
+int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T scale, void *seed)
 {
 	COORD_T dist;
 	color_t c;
@@ -286,7 +286,7 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 	
 	// Calculate environmental light
 	if (s->env_samples) {
-		env_light(s, &c, o, &N, ray->start, r.start);
+		env_light(s, &c, o, &N, r.start, seed);
 	}
 
 	// Calculate reflection vector
@@ -294,7 +294,7 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 		vector_scale(r.direction, &N, 2 * vector_dot(ray->direction, &N));
 		vector_sub(r.direction, ray->direction, r.direction);
 
-		ray_trace_recur(s, &c, &r, hop+1, o->m->reflective);
+		ray_trace_recur(s, &c, &r, hop+1, o->m->reflective, seed);
 	}
 
 
@@ -309,7 +309,7 @@ exit:
 	return 0;
 }
 
-color_t *ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples)
+color_t *ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples, void *seed)
 {
 	// Init return color. Will be accumilated with all the detected light.
 	color_t *c = color_set(NULL, 0, 0, 0);
@@ -331,7 +331,7 @@ color_t *ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples)
 		viewpoint_ray(&s->view, r.direction, x + tmp, y + tmp);
 
 		// Run the recursive ray trace
-		ray_trace_recur(s, &ctmp, &r, 0, 1);
+		ray_trace_recur(s, &ctmp, &r, 0, 1, seed);
 
 		// Color_add will not go above 1. In this case we don't want that.
 		c->r += ctmp.r; c->g += ctmp.g; c->b += ctmp.b;

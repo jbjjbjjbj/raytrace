@@ -12,6 +12,12 @@
 
 char container[ CONTAINER_SIZE(5, 4, 1) ];
 
+// Implement random 
+COORD_T ray_rand(void *seed)
+{
+	return (COORD_T) rand_r( (int *)seed )  / RAND_MAX;
+}
+
 int main()
 {
 
@@ -81,10 +87,13 @@ int main()
 	// Height percentage
 	unsigned percentstep = TESTH / 100;
 	unsigned percent = 0;
+	int seed;
 
 	for (int y = TESTH; y; y--) {
 		for (int x = TESTW; x; x--) {
-			color_t *c = ray_trace(&cont->space, x, y, 2);
+			// Random seed
+			seed = x * y;
+			color_t *c = ray_trace(&cont->space, x, y, 2, &seed);
 
 			if (c) {
 				pgm_write_pixel(stdout, c);
