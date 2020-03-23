@@ -93,12 +93,10 @@ int main()
 		for (int x = TESTW; x; x--) {
 			// Random seed
 			seed = x * y;
-			color_t *c = ray_trace(&cont->space, x, y, 2, &seed);
+			color_t c;
+			ray_trace(&cont->space, x, y, 2, &c, &seed);
 
-			if (c) {
-				pgm_write_pixel(stdout, c);
-			} 
-			free(c);
+			pgm_write_pixel(stdout, &c);
 
 		}
 

@@ -309,10 +309,10 @@ exit:
 	return 0;
 }
 
-color_t *ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples, void *seed)
+void ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples, color_t *c, void *seed)
 {
 	// Init return color. Will be accumilated with all the detected light.
-	color_t *c = color_set(NULL, 0, 0, 0);
+	color_set(c, 0, 0, 0);
 
 	// Setup primary ray
 	ray_t r;
@@ -349,6 +349,4 @@ color_t *ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples,
 
 	// Add ambient
 	color_add(c, c, &s->ambient);
-
-	return c;
 }
