@@ -38,9 +38,9 @@ settings_t gfx_high = {
     .arealight_samples = 64,
     .envlight_samples = 64,
     .antialias_samples = 2,
-    .globallight_samples = 32,
+    .globallight_samples = 64,
     .gl_opt_depth = 1,
-    .depth = 2,
+    .depth = 1,
 };
 
 settings_t gfx_low = {
@@ -80,7 +80,7 @@ int main()
 	color_set(&s->back, 0.0, 0.0, 0.0);
 	color_set(&s->env_color, 0.13, 0.13, 0.13);
 	s->env_enabled = false;
-    s->gfx = &gfx_low;
+    s->gfx = &gfx_high;
 
 	// Set viewpoint options
 	vector_set(&s->view.position, 0, 5, 4);
