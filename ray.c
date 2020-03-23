@@ -14,7 +14,7 @@ COORD_T ray_intersect_sphere(sphere_t *s, ray_t *ray, bool skip_dist)
 {
     // Vector between vector start and center of circle
     vector_t oc;
-    vector_sub(&oc, ray->start, s->center);
+    vector_sub(&oc, ray->start, &s->center);
 
     // Solve quadratic function
 	// TODO Not sure if this step i neccesary because dir is unit
@@ -62,7 +62,7 @@ COORD_T ray_intersect_sphere(sphere_t *s, ray_t *ray, bool skip_dist)
 COORD_T ray_intersect_plane(plane_t *p, ray_t *ray, bool skip_dist)
 {
 	// If zero ray is parralel to plane
-	COORD_T nr = vector_dot(p->norm, ray->direction);
+	COORD_T nr = vector_dot(&p->norm, ray->direction);
 	
 	// Take care of rounding errors
 	if (nr < ZERO_APROX && nr > -ZERO_APROX) {
@@ -74,10 +74,10 @@ COORD_T ray_intersect_plane(plane_t *p, ray_t *ray, bool skip_dist)
 
 	// Calculate distance
 	vector_t tmp;
-	vector_copy(&tmp, p->start);
+	vector_copy(&tmp, &p->start);
 	vector_sub(&tmp, &tmp, ray->start);
 
-	COORD_T t = vector_dot(&tmp, p->norm) / nr;
+	COORD_T t = vector_dot(&tmp, &p->norm) / nr;
 	return t;
 }
 
@@ -149,7 +149,7 @@ static void direct_light(space_t *s, color_t *dest, object_t *o, vector_t *N, ve
 		vector_t l;
 		
 		// Calculate distance to light
-		vector_sub(&l, light->pos, point);
+		vector_sub(&l, &light->pos, point);
 		COORD_T d = vector_len(&l);
 
 		// Normalice
@@ -167,7 +167,7 @@ static void direct_light(space_t *s, color_t *dest, object_t *o, vector_t *N, ve
 		color_t tmp;
 		COORD_T cl = vector_dot(&l, N);
 		if (cl > 0) {
-			color_scale(&tmp, light->defuse, cl * o->m->defuse);
+			color_scale(&tmp, &light->defuse, cl * o->m->defuse);
 			color_add(dest, &tmp, dest);
 		}
 
@@ -181,7 +181,7 @@ static void direct_light(space_t *s, color_t *dest, object_t *o, vector_t *N, ve
 		cl = 1 * vector_dot(&R, &V);
 		if (cl > 0) {
 			cl = pow(cl, o->m->shine);
-			color_scale(&tmp, light->specular, cl * o->m->specular);
+			color_scale(&tmp, &light->specular, cl * o->m->specular);
 			color_add(dest, &tmp, dest);
 		}
 
@@ -317,7 +317,9 @@ void ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples, col
 	// Setup primary ray
 	ray_t r;
 	r.start = &s->view.position;
-	r.direction = vector_copy(NULL, NULL);
+
+	vector_t dir;
+	r.direction = vector_set(&dir, 0, 0, 0);
 
 	// Multiple samples for antialias
 	// TODO better distribution of antialias probes
@@ -337,9 +339,6 @@ void ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples, col
 		c->r += ctmp.r; c->g += ctmp.g; c->b += ctmp.b;
 
 	}
-	//printf("COlor before devide %f, %f, %f\n", c->r, c->g, c->b);
-
-	free(r.direction);
 
 	// Take the median
 	if (samples > 1) {

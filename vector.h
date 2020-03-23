@@ -11,10 +11,9 @@ typedef struct {
 } vector_t;
 
 // Set vector to specified coordinates
-// If p is NULL it is created
 vector_t *vector_set(vector_t *p, COORD_T x, COORD_T y, COORD_T z);
 
-// Copy vector src. If dest is NULL a vector is allocated
+// Copy vector src
 vector_t *vector_copy(vector_t *dest, vector_t *src);
 
 // Calculate the length of v

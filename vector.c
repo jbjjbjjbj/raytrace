@@ -4,14 +4,13 @@
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
+#include <assert.h>
 
 static inline vector_t *vector_exists(vector_t *v)
 {
-	if (v) {
-		return v;
-	}
+	assert(v);
 
-	return (vector_t *) malloc(sizeof(vector_t));
+	return v;
 }
 
 // Overwrites stuff in p. If p is null a new vector is created

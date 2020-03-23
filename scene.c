@@ -73,7 +73,7 @@ static inline light_t *container_lig_space(container_t *cont)
 				))[cont->lig_index++];
 }
 
-object_t *add_sphere(container_t *cont, vector_t *c, COORD_T r, material_t *m)
+object_t *add_object(container_t *cont, unsigned type)
 {
 
 	object_t *o = container_obj_space(cont);
@@ -82,11 +82,7 @@ object_t *add_sphere(container_t *cont, vector_t *c, COORD_T r, material_t *m)
 	}
 
 	// Fill out the data
-	o->type = TYPE_SPHERE;
-	o->m = m;
-
-	o->sph.center = c;
-	o->sph.radius = r;
+	o->type = type;
 
 	// Link to the linked list
 	link_object(&cont->space, o);
@@ -94,35 +90,12 @@ object_t *add_sphere(container_t *cont, vector_t *c, COORD_T r, material_t *m)
 	return o;
 }
 
-object_t *add_plane(container_t *cont, vector_t *start, vector_t *dir, material_t *m)
-{
-
-	object_t *o = container_obj_space(cont);
-	if (!o) {
-		return NULL;
-	}
-
-	o->type = TYPE_PLANE;
-	o->m = m;
-
-	o->pl.start = start;
-	o->pl.norm = dir;
-
-	link_object(&cont->space, o);
-
-	return o;
-}
-
-light_t *add_light(container_t *cont, vector_t *pos, color_t *defuse, color_t *specular)
+light_t *add_light(container_t *cont)
 {
 	light_t *o = container_lig_space(cont);
 	if (!o) {
 		return NULL;
 	}
-
-	o->pos = pos;
-	o->defuse = defuse;
-	o->specular = specular;
 
 	space_t *s = &cont->space;
 	if (s) {
@@ -147,11 +120,11 @@ void obj_norm_at(object_t *o, vector_t *dest, vector_t *point)
 {
 	switch(o->type) {
 		case TYPE_SPHERE:
-			vector_sub(dest, point, o->sph.center);
+			vector_sub(dest, point, &o->sph.center);
 			vector_scale_inv(dest, dest, vector_len(dest));
 			break;
 		case TYPE_PLANE:
-			vector_copy(dest, o->pl.norm);
+			vector_copy(dest, &o->pl.norm);
 			break;
 	}
 

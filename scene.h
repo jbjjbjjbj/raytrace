@@ -14,19 +14,19 @@
 #define CONTAINER_SIZE(objs, mats, ligs) (sizeof(container_t) + objs * sizeof(object_t) + ligs * sizeof(light_t))
 
 typedef struct {
-	vector_t *center;
+	vector_t center;
 	COORD_T radius;
 } sphere_t;
 
 typedef struct {
-	vector_t *start;
-	vector_t *norm;
+	vector_t start;
+	vector_t norm;
 } plane_t;
 
 typedef struct light_s{
-	vector_t *pos;
-	color_t *defuse;
-	color_t *specular;
+	vector_t pos;
+	color_t defuse;
+	color_t specular;
 
 	struct light_s *next;
 } light_t;
@@ -45,7 +45,7 @@ typedef struct {
 
 // General object structure
 typedef struct object_s{
-	uint8_t type;
+	unsigned type;
 	struct object_s *next;
 
 	// Color and light information
@@ -101,9 +101,8 @@ container_t *container_init(container_t *c, unsigned objs, unsigned mats, unsign
 
 space_t *container_prepare_space(container_t *c);
 
-object_t *add_sphere(container_t *cont, vector_t *c, COORD_T r, material_t *m);
-object_t *add_plane(container_t *cont, vector_t *start, vector_t *dir, material_t *m);
-light_t *add_light(container_t *cont, vector_t *pos, color_t *defuse, color_t *specular);
+object_t *add_object(container_t *cont, unsigned type);
+light_t *add_light(container_t *cont);
 material_t *add_material(container_t *cont);
 
 void obj_norm_at(object_t *o, vector_t *dest, vector_t *point);

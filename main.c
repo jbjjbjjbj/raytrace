@@ -72,15 +72,35 @@ int main()
 
 	viewpoint_init(&s->view);
 	
-	// Setup plane
-	add_sphere(cont, vector_set(NULL, 0, 4, 7), 5, m2);
-	add_sphere(cont, vector_set(NULL, 8, 8, 4), 2, m3);
-	add_sphere(cont, vector_set(NULL, -10, 9, 5), 3, m);
-	add_sphere(cont, vector_set(NULL, -10, -5, 5), 3, m);
-	add_plane(cont, vector_set(NULL, 0, 0, 2), vector_set(NULL, 0, 0, 1), mpl);
-	//add_plane(&s, vector_set(NULL, 0, -20, 0), vector_set(NULL, 0, 1, 0), &mpl);
-	add_light(cont, vector_set(NULL, 20, 10, 30), color_set(NULL, 0.3, 0.3, 0.3), color_set(NULL, 0.5, 0.5, 0.5));
-	//add_light(&s, vector_set(NULL, 0, 10, 20), color_set(NULL, 0.5, 0.5, 0.5), color_set(NULL, 0.5, 0.5, 0.5));
+	object_t *o = add_object(cont, TYPE_SPHERE);
+	vector_set(&o->sph.center, 0, 4, 7);
+	o->sph.radius = 5;
+	o->m = m2;
+
+	o = add_object(cont, TYPE_SPHERE);
+	vector_set(&o->sph.center, 8, 8, 4);
+	o->sph.radius = 2;
+	o->m = m3;
+
+	o = add_object(cont, TYPE_SPHERE);
+	vector_set(&o->sph.center, -10, 9, 5);
+	o->sph.radius = 3;
+	o->m = m;
+
+	o = add_object(cont, TYPE_SPHERE);
+	vector_set(&o->sph.center, -10, -5, 5);
+	o->sph.radius = 3;
+	o->m = m;
+
+	o = add_object(cont, TYPE_PLANE);
+	vector_set(&o->pl.start, 0, 0, 2);
+	vector_set(&o->pl.norm, 0, 0, 1);
+	o->m = mpl;
+
+	light_t *l = add_light(cont);
+	vector_set(&l->pos, 20, 10, 30);
+	color_set(&l->defuse, 0.3, 0.3, 0.3);
+	color_set(&l->specular, 0.5, 0.5, 0.5);
 
 	pgm_write_header(stdout, TESTW, TESTH);
 
