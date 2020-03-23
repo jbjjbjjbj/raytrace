@@ -165,27 +165,17 @@ void *worker_func(void *arg) {
 	// Organize our office
 	office_t *office = (office_t *) arg;
 
-	// Timing
-	double rowtime = 0;
-	unsigned count = 0;
 	int seed;
 
 	// Start working
 	for (int y = office->id; y < TESTH; y += WORKERS) {
 		// Start time
-		clock_t t = clock();
-		count++;
-
 		for (int x = 0; x < TESTW; x++) {
 			color_t *c = &office->image[ y * TESTW + x ];
 			//color_t c;
 			seed = x * y;
 			ray_trace(&cont->space, TESTW - x, TESTH - y, 2, c, &seed);
 		}
-
-		// Time stop
-		t = clock() - t;
-		rowtime += ((double)t)/CLOCKS_PER_SEC; // in seconds
 
 		if (y % PERCENTSTEP == 0) {
 			// Unlock the thingy
@@ -194,8 +184,6 @@ void *worker_func(void *arg) {
 			pthread_mutex_unlock(&percentlock);	
 		}
 	}
-
-	fprintf(stderr, "Mean row time %lf over %d rounds\n", rowtime / count, count);
 
 	//free(office);
 	pthread_exit(NULL);
