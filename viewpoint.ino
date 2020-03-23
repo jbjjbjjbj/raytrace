@@ -36,13 +36,6 @@ void viewpoint_init(viewpoint_t *view)
 	vector_sub(&view->blc, &view->blc, vector_scale(&b, &b, gx));
 	vector_sub(&view->blc, &view->blc, vector_scale(&v, &v, gy));
 
-	// Debug print
-	/*
-	printf("Calculated the following viewpoint stuff\n");
-	printf("qx"); vector_print(&view->qx);
-	printf("qy"); vector_print(&view->qy);
-	printf("blc"); vector_print(&view->blc);
-	*/
 }
 
 // Calculate ray for viewport w, h

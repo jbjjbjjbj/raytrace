@@ -89,7 +89,7 @@ COORD_T ray_intersect(object_t *o, ray_t *ray, bool skip_dist)
 		case TYPE_SPHERE:
 			return ray_intersect_sphere(&o->sph, ray, skip_dist);
 		default:
-			printf("Unknown object type %d\n", o->type);
+			//printf("Unknown object type %d\n", o->type);
 			return -1;
 	}
 }
@@ -262,14 +262,14 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 	color_t c;
 	color_set(&c, 0, 0, 0);
 
+	vector_t rdir, rstart;
+	ray_t r = {start: &rstart, direction: &rdir};
+
 	object_t *o = ray_cast(s, ray, &dist, false, 0);
 	if (!o) {
 		color_add(&c, &c, &s->back);
 		goto exit;
 	}
-
-	vector_t rdir, rstart;
-	ray_t r = {start: &rstart, direction: &rdir};
 
 	vector_scale(r.start, ray->direction, dist);
 	vector_add(r.start, r.start, ray->start);
@@ -323,7 +323,7 @@ void ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples, col
 
 	// Multiple samples for antialias
 	// TODO better distribution of antialias probes
-	for (int i = 0; i < samples; i++) {
+	for (unsigned i = 0; i < samples; i++) {
 		color_t ctmp;
 		color_set(&ctmp, 0, 0, 0);
 		//memset(&ctmp, 0, sizeof(color_t));

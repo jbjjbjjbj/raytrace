@@ -7,37 +7,41 @@
 #include "scene.h"
 #include "pgm.h"
 
-#define TESTW 1000
-#define TESTH 1000
+#define TESTW 320
+#define TESTH 240
 
 char container[ CONTAINER_SIZE(5, 4, 1) ];
 
 // Implement random 
 COORD_T ray_rand(void *seed)
 {
-	return (COORD_T) rand_r( (int *)seed )  / RAND_MAX;
+	return (COORD_T) random(10000) / 10000;
 }
 
-int main()
+void setup()
 {
+	Serial.begin(115200);
+	Serial.println("Starting");
 
 	container_t *cont = (container_t *) container;
 	container_init(cont, 5, 4, 1);
 	
 	// Init space_t
-	space_t *s = container_prepare_space(cont);;
+	space_t *s = container_prepare_space(cont);
+	Serial.println("Starting");
 	
 	// Set space options
 	color_set(&s->ambient, 0.09, 0.09, 0.09);
 	color_set(&s->back, 0.8, 0.8, 0.8);
 	color_set(&s->env_color, 0.13, 0.13, 0.13);
-	s->env_samples = 16;
+	s->env_samples = 256;
 
 	// Set viewpoint options
 	vector_set(&s->view.position, 0, 16, 6);
 	vector_set(&s->view.target, 0, 0, 6);
 	s->view.width = TESTW;
 	s->view.height = TESTH;
+	Serial.println("Starting");
 
 	// Create materials
 	material_t *m = add_material(cont);
@@ -53,6 +57,7 @@ int main()
 	m3->specular = 0.0;
 	m3->shine = 80;
 	m3->reflective = 0.05;
+	Serial.println("Starting");
 
 	material_t *m2 = add_material(cont);
 	vector_set(&m2->color, 1, 1, 1);
@@ -60,6 +65,7 @@ int main()
 	m2->specular = 0.5;
 	m2->shine = 80;
 	m2->reflective = 1;
+	Serial.println("Starting");
 
 	material_t *mpl = add_material(cont);
 	//vector_set(&mpl.color, 0, 0.396, 0.7019);
@@ -81,6 +87,7 @@ int main()
 	vector_set(&o->sph.center, 8, 8, 4);
 	o->sph.radius = 2;
 	o->m = m3;
+	Serial.println("Starting");
 
 	o = add_object(cont, TYPE_SPHERE);
 	vector_set(&o->sph.center, -10, 9, 5);
@@ -104,25 +111,16 @@ int main()
 
 	pgm_write_header(stdout, TESTW, TESTH);
 
-	// Height percentage
-	unsigned percentstep = TESTH / 100;
-	unsigned percent = 0;
-	int seed;
-
 	for (int y = TESTH; y; y--) {
 		for (int x = TESTW; x; x--) {
 			// Random seed
-			seed = x * y;
 			color_t c;
-			ray_trace(&cont->space, x, y, 2, &c, &seed);
-
-			pgm_write_pixel(stdout, &c);
-
+			ray_trace(&cont->space, x, y, 2, &c, NULL);
 		}
-
-		if (y % percentstep == 0) {
-			fprintf(stderr, "%d%\n", percent++);
-		}
+		Serial.print("row "); Serial.println(y);
 	}
 	
+}
+
+void loop() {
 }

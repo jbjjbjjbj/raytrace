@@ -26,7 +26,12 @@ container_t *container_init(container_t *c, unsigned objs, unsigned mats, unsign
 
 space_t *container_prepare_space(container_t *c)
 {
-	memset(&c->space, 0, sizeof(space_t));
+	//memset(&c->space, 0, sizeof(space_t));
+	for (int i = 0; i < sizeof(space_t); i++) {
+		*(uint8_t *)&c->space = 0;
+	}
+
+	return &c->space;
 }
 
 // Finds the next empty object_t space
@@ -34,7 +39,7 @@ space_t *container_prepare_space(container_t *c)
 static inline object_t *container_obj_space(container_t *cont) 
 {
 	if (cont->obj_index >= cont->obj_cap) {
-		fprintf(stderr, "Could not create object, because container is full\n");
+		//fprintf(stderr, "Could not create object, because container is full\n");
 		return NULL;
 	}
 
@@ -45,7 +50,7 @@ static inline object_t *container_obj_space(container_t *cont)
 static inline material_t *container_mat_space(container_t *cont) 
 {
 	if (cont->mat_index >= cont->mat_cap) {
-		fprintf(stderr, "Could not create material, because container is full\n");
+		//fprintf(stderr, "Could not create material, because container is full\n");
 		return NULL;
 	}
 
@@ -60,7 +65,7 @@ static inline material_t *container_mat_space(container_t *cont)
 static inline light_t *container_lig_space(container_t *cont) 
 {
 	if (cont->lig_index >= cont->lig_cap) {
-		fprintf(stderr, "Could not create light, because container is full\n");
+		//fprintf(stderr, "Could not create light, because container is full\n");
 		return NULL;
 	}
 

@@ -116,5 +116,5 @@ vector_t *vector_cross(vector_t *dest, vector_t *a, vector_t *b)
 
 void vector_print(vector_t *v)
 {
-	printf("[ %f, %f, %f ]\n", v->x, v->y, v->z);
+	Serial.println("Not implemented");
 }
