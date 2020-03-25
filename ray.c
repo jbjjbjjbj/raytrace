@@ -276,7 +276,7 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 
 	// Calculate normal vector
 	vector_t N;
-	obj_norm_at(o, &N, r.start);
+	obj_norm_at(o, &N, r.start, ray->direction);
 
 	// Check if we should calculate light
 	if (o->m->defuse + o->m->specular > ZERO_APROX) {
@@ -290,7 +290,7 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 	}
 
 	// Calculate reflection vector
-	if (hop < 2 && o->m->reflective > ZERO_APROX) {
+	if (hop < 10 && o->m->reflective > ZERO_APROX) {
 		vector_scale(r.direction, &N, 2 * vector_dot(ray->direction, &N));
 		vector_sub(r.direction, ray->direction, r.direction);
 

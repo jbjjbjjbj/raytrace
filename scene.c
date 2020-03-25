@@ -116,7 +116,7 @@ material_t *add_material(container_t *cont)
 	return m;
 }
 
-void obj_norm_at(object_t *o, vector_t *dest, vector_t *point)
+void obj_norm_at(object_t *o, vector_t *dest, vector_t *point, vector_t *direction)
 {
 	switch(o->type) {
 		case TYPE_SPHERE:
@@ -124,7 +124,8 @@ void obj_norm_at(object_t *o, vector_t *dest, vector_t *point)
 			vector_scale_inv(dest, dest, vector_len(dest));
 			break;
 		case TYPE_PLANE:
-			vector_copy(dest, &o->pl.norm);
+			// Calculate if the point is in front
+			vector_scale(dest, &o->pl.norm, (vector_dot(direction, &o->pl.norm) > 0) ? -1 : 1);
 			break;
 	}
 

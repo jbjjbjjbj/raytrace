@@ -26,7 +26,11 @@ typedef struct {
 unsigned percent = 0;
 pthread_mutex_t percentlock;
 
-char container[ CONTAINER_SIZE(5, 4, 1) ];
+#define OBJECTS 9
+#define MATERIALS 6
+#define LIGHTS 1
+
+char container[ CONTAINER_SIZE(OBJECTS, MATERIALS, LIGHTS) ];
 container_t *cont = (container_t *) container;
 
 // Implement random 
@@ -37,7 +41,7 @@ COORD_T ray_rand(void *seed)
 
 int main()
 {
-	container_init(cont, 5, 4, 1);
+	container_init(cont, OBJECTS, MATERIALS, LIGHTS);
 	
 	// Init space_t
 	space_t *s = container_prepare_space(cont);;
@@ -46,11 +50,11 @@ int main()
 	color_set(&s->ambient, 0.09, 0.09, 0.09);
 	color_set(&s->back, 0.8, 0.8, 0.8);
 	color_set(&s->env_color, 0.13, 0.13, 0.13);
-	s->env_samples = 16;
+	s->env_samples = 0;
 
 	// Set viewpoint options
-	vector_set(&s->view.position, 0, 16, 6);
-	vector_set(&s->view.target, 0, 0, 6);
+	vector_set(&s->view.position, 0, 5, 5);
+	vector_set(&s->view.target, 0, 0, 5);
 	s->view.width = TESTW;
 	s->view.height = TESTH;
 
@@ -71,9 +75,9 @@ int main()
 
 	material_t *m2 = add_material(cont);
 	vector_set(&m2->color, 1, 1, 1);
-	m2->defuse = 0.0;
+	m2->defuse = 0;
 	m2->specular = 0.5;
-	m2->shine = 80;
+	m2->shine = 50;
 	m2->reflective = 1;
 
 	material_t *mpl = add_material(cont);
@@ -81,38 +85,69 @@ int main()
 	mpl->defuse = 1;
 	mpl->specular = 0.0;
 	mpl->shine = 50;
-	mpl->reflective = 0.0;
+	mpl->reflective = 0;
+	
+	material_t *mplgreen = add_material(cont);
+	memcpy(mplgreen, mpl, sizeof(material_t));
+	vector_set(&mplgreen->color, 0.3, 0.3, 1);
+	//mplgreen->reflective = 1;
+	//mplgreen->defuse = 0;
+
+	material_t *mplred = add_material(cont);
+	memcpy(mplred, mplgreen, sizeof(material_t));
+	vector_set(&mplred->color, 1, 0.3, 0.3);
 
 	viewpoint_init(&s->view);
 	
-	object_t *o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, 0, 4, 7);
-	o->sph.radius = 5;
+	object_t *o;
+	o = add_object(cont, TYPE_SPHERE);
+	vector_set(&o->sph.center, -2, -1, 7);
+	o->sph.radius = 1.5;
 	o->m = m2;
 
 	o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, 8, 8, 4);
-	o->sph.radius = 2;
-	o->m = m3;
-
-	o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, -10, 9, 5);
-	o->sph.radius = 3;
+	vector_set(&o->sph.center, 0, 1, 3);
+	o->sph.radius = 1;
 	o->m = m;
 
 	o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, -10, -5, 5);
-	o->sph.radius = 3;
+	vector_set(&o->sph.center, 1, 1, 5);
+	o->sph.radius = 1;
 	o->m = m;
 
 	o = add_object(cont, TYPE_PLANE);
-	vector_set(&o->pl.start, 0, 0, 2);
+	vector_set(&o->pl.start, 0, 0, 0);
 	vector_set(&o->pl.norm, 0, 0, 1);
 	o->m = mpl;
 
+	o = add_object(cont, TYPE_PLANE);
+	vector_set(&o->pl.start, 0, 0, 10);
+	vector_set(&o->pl.norm, 0, 0, 1);
+	o->m = mpl;
+
+	o = add_object(cont, TYPE_PLANE);
+	vector_set(&o->pl.start, 0, -3, 0);
+	vector_set(&o->pl.norm, 0, 1, 0);
+	o->m = mpl;
+
+	o = add_object(cont, TYPE_PLANE);
+	vector_set(&o->pl.start, 0, 10, 0);
+	vector_set(&o->pl.norm, 0, 1, 0);
+	o->m = mpl;
+
+	o = add_object(cont, TYPE_PLANE);
+	vector_set(&o->pl.start, -5, 0, 0);
+	vector_set(&o->pl.norm, 1, 0, 0);
+	o->m = mplgreen;
+
+	o = add_object(cont, TYPE_PLANE);
+	vector_set(&o->pl.start, 5, 0, 0);
+	vector_set(&o->pl.norm, 1, 0, 0);
+	o->m = mplred;
+
 	light_t *l = add_light(cont);
-	vector_set(&l->pos, 20, 10, 30);
-	color_set(&l->defuse, 0.3, 0.3, 0.3);
+	vector_set(&l->pos, 3, 0, 1);
+	color_set(&l->defuse, 1, 1, 1);
 	color_set(&l->specular, 0.5, 0.5, 0.5);
 
 	pgm_write_header(stdout, TESTW, TESTH);

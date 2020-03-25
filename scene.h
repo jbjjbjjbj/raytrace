@@ -105,6 +105,6 @@ object_t *add_object(container_t *cont, unsigned type);
 light_t *add_light(container_t *cont);
 material_t *add_material(container_t *cont);
 
-void obj_norm_at(object_t *o, vector_t *dest, vector_t *point);
+void obj_norm_at(object_t *o, vector_t *dest, vector_t *point, vector_t *direction);
 
 #endif
