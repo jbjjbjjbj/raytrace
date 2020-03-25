@@ -1,1 +1,7 @@
 https://en.wikipedia.org/wiki/Diffuse_reflection
+
+Global illumination / area light / Soft shadows 
+Light drops off depending on distance.
+
+Graphics setting variable
+
