@@ -1,7 +1,7 @@
 CC=gcc
 
 # Enable debugging
-CFLAGS=-ggdb
+CFLAGS=-ggdb -O3
 
 # We need math
 LDFLAGS=-lm -lpthread

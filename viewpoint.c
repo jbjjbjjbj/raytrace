@@ -4,7 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-static const vector_t up = {0, 0, 1};
+static const vector_t up = {0, 1, 0};
 
 void viewpoint_init(viewpoint_t *view)
 {

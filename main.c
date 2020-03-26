@@ -37,7 +37,7 @@ container_t *cont = (container_t *) container;
 // Implement random 
 COORD_T ray_rand(void *seed)
 {
-	return (COORD_T) rand_r( (int *)seed )  / RAND_MAX;
+	return (COORD_T) rand_r( (unsigned *)seed )  / RAND_MAX;
 }
 
 int main()
@@ -55,7 +55,7 @@ int main()
 
 	// Set viewpoint options
 	vector_set(&s->view.position, 0, 5, 5);
-	vector_set(&s->view.target, 0, 0, 5);
+	vector_set(&s->view.target, 0, 5, 0);
 	s->view.width = TESTW;
 	s->view.height = TESTH;
 
@@ -99,38 +99,38 @@ int main()
 	
 	object_t *o;
 	o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, -2, -1, 7);
+	vector_set(&o->sph.center, -2, 7, 1);
 	o->sph.radius = 1.5;
 	o->m = m2;
 
 	o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, 0, 1, 3);
+	vector_set(&o->sph.center, 0, 3, 1);
 	o->sph.radius = 1;
 	o->m = m;
 
 	o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, 1, 1, 1);
+	vector_set(&o->sph.center, 2, 4, 1);
 	o->sph.radius = 1;
 	o->m = m;
 
 	o = add_object(cont, TYPE_PLANE);
 	vector_set(&o->pl.start, 0, 0, 0);
-	vector_set(&o->pl.norm, 0, 0, 1);
-	o->m = mpl;
-
-	o = add_object(cont, TYPE_PLANE);
-	vector_set(&o->pl.start, 0, 0, 10);
-	vector_set(&o->pl.norm, 0, 0, 1);
-	o->m = mpl;
-
-	o = add_object(cont, TYPE_PLANE);
-	vector_set(&o->pl.start, 0, -3, 0);
 	vector_set(&o->pl.norm, 0, 1, 0);
 	o->m = mpl;
 
 	o = add_object(cont, TYPE_PLANE);
 	vector_set(&o->pl.start, 0, 10, 0);
 	vector_set(&o->pl.norm, 0, 1, 0);
+	o->m = mpl;
+
+	o = add_object(cont, TYPE_PLANE);
+	vector_set(&o->pl.start, 0, 0, -3);
+	vector_set(&o->pl.norm, 0, 0, 1);
+	o->m = mpl;
+
+	o = add_object(cont, TYPE_PLANE);
+	vector_set(&o->pl.start, 0, 0, 10);
+	vector_set(&o->pl.norm, 0, 0, 1);
 	o->m = mpl;
 
 	o = add_object(cont, TYPE_PLANE);
@@ -146,15 +146,16 @@ int main()
 	// Used for the light ball
 	/*
 	o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, 2, -2, 8);
+	vector_set(&o->sph.center, 2, 8, -2);
 	o->sph.radius = 1;
 	o->m = ml;
 	*/
 
 	light_t *l = add_light(cont, TYPE_L_POINT);
-	vector_set(&l->point.pos, 2, 0, 5);
+	vector_set(&l->point.pos, 2, 8, -1);
+	//l->area = o;
 	color_set(&l->color, 1, 1, 1);
-	l->radiance = 10;
+	l->radiance = 5;
 
 	pgm_write_header(stdout, TESTW, TESTH);
 

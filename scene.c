@@ -27,6 +27,7 @@ container_t *container_init(container_t *c, unsigned objs, unsigned mats, unsign
 space_t *container_prepare_space(container_t *c)
 {
 	memset(&c->space, 0, sizeof(space_t));
+	return &c->space;
 }
 
 // Finds the next empty object_t space
