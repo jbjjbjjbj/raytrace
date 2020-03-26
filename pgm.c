@@ -10,6 +10,33 @@ int pgm_write_header(FILE *fp, unsigned int w, unsigned int h)
 	return fprintf(fp, "P3\n%d %d\n%d\n", w, h, COLOR_MAX);
 }
 
+/*
+ * Diden't really look that nice. 
+void color_clamp(color_t *c)
+{
+	// Fint the max of the 3 values
+	COORD_T max = c->r > c->g ? c->r : c->g;
+	max = max > c->b ? max : c->b;
+
+	if (max <= 1.0) {
+		return;
+	}
+
+	// Scale everything by this
+	color_scale(c, c, (COORD_T) 1 / max);
+}
+*/
+
+#define MAXOUT(v) ( if (v > 1) { v = 1; } )
+
+void color_clamp(color_t *c)
+{
+	// Just max them out
+	if (c->r > 1) { c->r = 1; }
+	if (c->g > 1) { c->g = 1; }
+	if (c->b > 1) { c->b = 1; }
+}
+
 int pgm_write_pixel(FILE *fp, color_t *c)
 {
 	return fprintf(fp, "%.0lf %.0lf %.0lf\n", c->r * COLOR_MAX, c->g * COLOR_MAX, c->b * COLOR_MAX);
@@ -26,28 +53,18 @@ color_t *color_set(color_t *c, COORD_T r, COORD_T g, COORD_T b)
 
 color_t *color_add(color_t *dest, color_t *a, color_t *b)
 {
-	COORD_T tmp = a->r + b->r;
-	dest->r = tmp > 1 ? 1 : tmp;
-
-	tmp = a->g + b->g;
-	dest->g = tmp > 1 ? 1 : tmp;
-
-	tmp = a->b + b->b;
-	dest->b = tmp > 1 ? 1 : tmp;
+	dest->r = a->r + b->r;
+	dest->g = a->g + b->g;
+	dest->b = a->b + b->b;
 
 	return dest;
 }
 
 color_t *color_scale(color_t *dest, color_t *a, COORD_T b)
 {
-	COORD_T tmp = a->r * b;
-	dest->r = tmp > 1 ? 1 : tmp;
-
-	tmp = a->g * b;
-	dest->g = tmp > 1 ? 1 : tmp;
-
-	tmp = a->b * b;
-	dest->b = tmp > 1 ? 1 : tmp;
+	dest->r = a->r * b;
+	dest->g = a->g * b;
+	dest->b = a->b * b;
 
 	return dest;
 }

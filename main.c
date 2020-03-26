@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <string.h>
 
 #include "vector.h"
 #include "ray.h"
@@ -26,7 +27,7 @@ typedef struct {
 unsigned percent = 0;
 pthread_mutex_t percentlock;
 
-#define OBJECTS 9
+#define OBJECTS 10
 #define MATERIALS 6
 #define LIGHTS 1
 
@@ -62,16 +63,13 @@ int main()
 	material_t *m = add_material(cont);
 	vector_set(&m->color, 0.4, 0.4, 1);
 	m->defuse = 1;
-	m->specular = 0.0;
+	m->specular = 0;
 	m->shine = 80;
 	m->reflective = 0.0;
 
-	material_t *m3 = add_material(cont);
-	vector_set(&m3->color, 1, 0.3, 0.1);
-	m3->defuse = 0.95;
-	m3->specular = 0.0;
-	m3->shine = 80;
-	m3->reflective = 0.05;
+	material_t *ml = add_material(cont);
+	vector_set(&ml->color, 1, 1, 1);
+	ml->emissive = 1;
 
 	material_t *m2 = add_material(cont);
 	vector_set(&m2->color, 1, 1, 1);
@@ -111,7 +109,7 @@ int main()
 	o->m = m;
 
 	o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, 1, 1, 5);
+	vector_set(&o->sph.center, 1, 1, 1);
 	o->sph.radius = 1;
 	o->m = m;
 
@@ -144,11 +142,19 @@ int main()
 	vector_set(&o->pl.start, 5, 0, 0);
 	vector_set(&o->pl.norm, 1, 0, 0);
 	o->m = mplred;
+	
+	// Used for the light ball
+	/*
+	o = add_object(cont, TYPE_SPHERE);
+	vector_set(&o->sph.center, 2, -2, 8);
+	o->sph.radius = 1;
+	o->m = ml;
+	*/
 
-	light_t *l = add_light(cont);
-	vector_set(&l->pos, 3, 0, 1);
-	color_set(&l->defuse, 1, 1, 1);
-	color_set(&l->specular, 0.5, 0.5, 0.5);
+	light_t *l = add_light(cont, TYPE_L_POINT);
+	vector_set(&l->point.pos, 2, 0, 5);
+	color_set(&l->color, 1, 1, 1);
+	l->radiance = 10;
 
 	pgm_write_header(stdout, TESTW, TESTH);
 
@@ -210,6 +216,7 @@ void *worker_func(void *arg) {
 			//color_t c;
 			seed = x * y;
 			ray_trace(&cont->space, TESTW - x, TESTH - y, 2, c, &seed);
+			color_clamp(c);
 		}
 
 		if (y % PERCENTSTEP == 0) {

@@ -90,12 +90,14 @@ object_t *add_object(container_t *cont, unsigned type)
 	return o;
 }
 
-light_t *add_light(container_t *cont)
+light_t *add_light(container_t *cont, unsigned type)
 {
 	light_t *o = container_lig_space(cont);
 	if (!o) {
 		return NULL;
 	}
+
+	o->type = type;
 
 	space_t *s = &cont->space;
 	if (s) {
@@ -112,6 +114,7 @@ light_t *add_light(container_t *cont)
 material_t *add_material(container_t *cont)
 {
 	material_t *m = container_mat_space(cont);
+	memset(m, 0, sizeof(material_t));
 
 	return m;
 }

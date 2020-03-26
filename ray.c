@@ -131,11 +131,63 @@ object_t *ray_cast(space_t *s, ray_t *r, COORD_T *dist_ret, bool chk, COORD_T ch
 	return smallest;
 }
 
-static void direct_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point)
+// Light (l) the object o reflects. Given is the point of intersect, vector to the light l, vector to viewer V, and normal at point N.
+static void reflected_at(object_t *o, color_t *dest, light_t *light, COORD_T dist, vector_t *point, vector_t *l, vector_t *V, vector_t *N) {
+	// Calculate light intensity
+	COORD_T i = light->radiance / ( dist * dist);
+
+	// Calculate Deffuse part
+	color_t tmp;
+	COORD_T cl = vector_dot(l, N) * i;
+	if (cl > 0) {
+		color_scale(&tmp, &light->color, cl * o->m->defuse);
+		color_add(dest, &tmp, dest);
+	}
+
+	// calculate specular part. TODO implement blinn-phong
+	// Calculate R_m
+	vector_t R;
+	vector_scale(&R, N, 2 * vector_dot(l, N));
+	vector_sub(&R, &R, l);
+
+	// Add it to the light
+	cl = vector_dot(&R, V) * i;
+	if (cl > 0) {
+		cl = pow(cl, o->m->shine);
+		color_scale(&tmp, &light->color, cl * o->m->specular);
+		color_add(dest, &tmp, dest);
+	}
+}
+
+// Calculate the contribution of light on o. V is vector to viewer and N is normal at point
+static void contribution_from_pointlight(space_t *s, color_t *dest, object_t *o, light_t *light, vector_t *point, vector_t *V, vector_t *N)
 {
+	vector_t l;
+	
+	// Prepare ray
 	ray_t r;
 	r.start = point;
-	
+
+	// Calculate distance to light
+	vector_sub(&l, &light->point.pos, point);
+	COORD_T d = vector_len(&l);
+
+	// Normalice
+	vector_scale_inv(&l, &l, vector_len(&l));
+
+	// Find obstacles
+	r.direction = &l;
+	object_t *obs = ray_cast(s, &r, NULL, true, d);
+	if (obs) {
+		return;
+	}
+
+	// Calculate the reflected light
+	reflected_at(o, dest, light, d, point, &l, V, N);
+}
+
+static void direct_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point)
+{
 	// And vector towards viewer
 	vector_t V;
 	vector_sub(&V, eye, point);
@@ -143,47 +195,11 @@ static void direct_light(space_t *s, color_t *dest, object_t *o, vector_t *N, ve
 	// Normalice it
 	vector_scale_inv(&V, &V, vector_len(&V));
 
-	// Cast light rays
+	// Loop lights
 	light_t *light = s->lights;
 	while (light) {
-		vector_t l;
-		
-		// Calculate distance to light
-		vector_sub(&l, &light->pos, point);
-		COORD_T d = vector_len(&l);
-
-		// Normalice
-		vector_scale_inv(&l, &l, vector_len(&l));
-
-		// Find obstacles
-		r.direction = &l;
-		object_t *obs = ray_cast(s, &r, NULL, true, d);
-		if (obs) {
-			light = light->next;
-			continue;
-		}
-		
-		// Calculate Deffuse part
-		color_t tmp;
-		COORD_T cl = vector_dot(&l, N);
-		if (cl > 0) {
-			color_scale(&tmp, &light->defuse, cl * o->m->defuse);
-			color_add(dest, &tmp, dest);
-		}
-
-		// calculate specular part. TODO implement blinn-phong
-		// Calculate R_m
-		vector_t R;
-		vector_scale(&R, N, 2 * vector_dot(&l, N));
-		vector_sub(&R, &R, &l);
-		
-		// Add it to the light
-		cl = 1 * vector_dot(&R, &V);
-		if (cl > 0) {
-			cl = pow(cl, o->m->shine);
-			color_scale(&tmp, &light->specular, cl * o->m->specular);
-			color_add(dest, &tmp, dest);
-		}
+		// Calculate contribution depending on the light type
+		contribution_from_pointlight(s, dest, o, light, point, &V, N);
 
 		light = light->next;
 	}
@@ -277,6 +293,11 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 	// Calculate normal vector
 	vector_t N;
 	obj_norm_at(o, &N, r.start, ray->direction);
+
+	// Check if emissive
+	if (o->m->emissive > ZERO_APROX) {
+		color_set(&c, o->m->emissive, o->m->emissive, o->m->emissive);
+	}
 
 	// Check if we should calculate light
 	if (o->m->defuse + o->m->specular > ZERO_APROX) {

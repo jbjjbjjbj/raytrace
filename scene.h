@@ -11,6 +11,9 @@
 #define TYPE_SPHERE 1
 #define TYPE_PLANE 2
 
+#define TYPE_L_POINT 1
+#define TYPE_L_AREA 2
+
 #define CONTAINER_SIZE(objs, mats, ligs) (sizeof(container_t) + objs * sizeof(object_t) + ligs * sizeof(light_t))
 
 typedef struct {
@@ -23,19 +26,13 @@ typedef struct {
 	vector_t norm;
 } plane_t;
 
-typedef struct light_s{
-	vector_t pos;
-	color_t defuse;
-	color_t specular;
-
-	struct light_s *next;
-} light_t;
-
 typedef struct {
 	vector_t color;
 
 	// Light properties
 	COORD_T defuse;
+	// If this object emits light. Only makes sense if combined with a area light.
+	COORD_T emissive; 
 	COORD_T specular;
 	unsigned int shine;
 	
@@ -56,6 +53,23 @@ typedef struct object_s{
 		plane_t pl;
 	};
 } object_t;
+
+typedef struct light_s{
+	unsigned type;
+	color_t color;
+
+	COORD_T radiance;
+
+	union {
+		struct {
+			vector_t pos;
+		} point;
+		object_t *area;
+	};
+	struct light_s *next;
+} light_t;
+
+light_t l;
 
 typedef struct {
 	viewpoint_t view;
@@ -102,7 +116,7 @@ container_t *container_init(container_t *c, unsigned objs, unsigned mats, unsign
 space_t *container_prepare_space(container_t *c);
 
 object_t *add_object(container_t *cont, unsigned type);
-light_t *add_light(container_t *cont);
+light_t *add_light(container_t *cont, unsigned type);
 material_t *add_material(container_t *cont);
 
 void obj_norm_at(object_t *o, vector_t *dest, vector_t *point, vector_t *direction);
