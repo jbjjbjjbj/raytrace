@@ -192,27 +192,62 @@ static void contribution_from_pointlight(space_t *s, color_t *dest, object_t *o,
 static void contribution_from_arealight(space_t *s, color_t *dest, object_t *o, light_t *light, vector_t *point, vector_t *V, vector_t *N, void *seed)
 {
 	// This only works with spheres
-	assert(o->type == TYPE_SPHERE);
+	assert(light->area->type == TYPE_SPHERE);
 
 	// Color to collect temporary results in
 	color_t c;
+	color_set(&c, 0, 0, 0);
 
 	ray_t ray;
 	ray.start = point;
+
+	// Calculate vector from light to point
+	vector_t l;
+	vector_sub(&l, point, &light->area->sph.center);
+	vector_scale_inv(&l, &l, vector_len(&l));
+
+	// Initialize the transformation stuff
+	csystem_t cs;
+	csystem_init(&cs, &l);
 
 	// Do the same monte carlo as with environment but the starting point is the center of the circle.
 	// And the result is a point on the circle
 	for (int i = 0; i < 16; i++) {
 		// Do the monte carlo random distribution thing from the article
 		COORD_T r1 = ray_rand(seed);
-		COORD_T r2 = ray_rand(seed);
 
-		COORD_T sinTheta = sqrt(1 - r1 * r1);
-		COORD_T phi = 2 * PI * r2;
+		// Random direction on halv sphere pointing towards point
+		vector_t randpoint;
+		csystem_hemisphere_random(&cs, r1, ray_rand(seed), &randpoint);
+		csystem_calc_real(&cs, &randpoint, &randpoint);
+		
+		// Shift it up to center of circle
+		vector_add(&randpoint, &randpoint, &light->area->sph.center);
 
-		// Cast a ray
+		// Cast a ray towards it, reuse randpoint as direction
+		vector_sub(&randpoint, &randpoint, point);
+		COORD_T dist = vector_len(&randpoint);
+
+		vector_t dir;
+		vector_scale_inv(&dir, &randpoint, dist);
+
+		ray.direction = &dir;
+
+		object_t *obs = ray_cast(s, &ray, NULL, true, dist - ZERO_APROX);
+		if (obs) {
+			// We hit something skip it.
+			continue;
+		}
+
+		// Add the light contribution, Not sure why it is scaled
+		reflected_at(o, &c, light, dist, point, &randpoint, V, N);
 
 	}
+
+	// Device by pdf
+	color_scale(&c, &c, ((COORD_T) 1 / 16) * (2 * PI));
+
+	color_add(dest, dest, &c);
 
 }
 
@@ -229,7 +264,14 @@ static void direct_light(space_t *s, color_t *dest, object_t *o, vector_t *N, ve
 	light_t *light = s->lights;
 	while (light) {
 		// Calculate contribution depending on the light type
-		contribution_from_pointlight(s, dest, o, light, point, &V, N);
+		switch (light->type) {
+			case TYPE_L_POINT:
+				contribution_from_pointlight(s, dest, o, light, point, &V, N);
+				break;
+			case TYPE_L_AREA:
+				contribution_from_arealight(s, dest, o, light, point, &V, N, seed);
+				break;
+		}
 
 		light = light->next;
 	}
@@ -252,7 +294,7 @@ static void env_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vecto
 
 	for (unsigned i = 0; i < s->env_samples; i++) {
 		COORD_T r1 = ray_rand(seed);
-		//
+		
 		// Calculate the random direction vector
 		vector_t randdir;
 		csystem_hemisphere_random(&cs, r1, ray_rand(seed), &randdir);

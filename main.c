@@ -124,7 +124,7 @@ int main()
 	o->m = mpl;
 
 	o = add_object(cont, TYPE_PLANE);
-	vector_set(&o->pl.start, 0, 0, -3);
+	vector_set(&o->pl.start, 0, 0, -5);
 	vector_set(&o->pl.norm, 0, 0, 1);
 	o->m = mpl;
 
@@ -144,18 +144,16 @@ int main()
 	o->m = mplred;
 	
 	// Used for the light ball
-	/*
 	o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, 2, 8, -2);
+	vector_set(&o->sph.center, 2, 7, 0);
 	o->sph.radius = 1;
 	o->m = ml;
-	*/
 
-	light_t *l = add_light(cont, TYPE_L_POINT);
-	vector_set(&l->point.pos, 2, 8, -1);
-	//l->area = o;
+	light_t *l = add_light(cont, TYPE_L_AREA);
+	//vector_set(&l->point.pos, 2, 8, -1);
+	l->area = o;
 	color_set(&l->color, 1, 1, 1);
-	l->radiance = 5;
+	l->radiance = 0.8;
 
 	pgm_write_header(stdout, TESTW, TESTH);
 
