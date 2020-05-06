@@ -71,6 +71,17 @@ typedef struct light_s{
 
 light_t l;
 
+// Graphics settings
+// Should actually sit in ray.c
+typedef struct {
+    unsigned arealight_samples;
+    unsigned antialias_samples;
+    unsigned envlight_samples;
+    unsigned globallight_samples;
+
+    unsigned depth;
+} settings_t;
+
 typedef struct {
 	viewpoint_t view;
 	
@@ -80,10 +91,11 @@ typedef struct {
 	color_t ambient;
 	color_t back;
 
+    settings_t *gfx;
 	// Environment light
 	// TODO make more general
 	// Slows things down alot
-	unsigned env_samples;
+    bool env_enabled;
 	color_t env_color;
 } space_t;
 

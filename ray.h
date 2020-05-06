@@ -20,6 +20,6 @@ COORD_T ray_intersect_sphere(sphere_t *s, ray_t *ray, bool skip_dist);
 COORD_T ray_intersect_plane(plane_t *p, ray_t *ray, bool skip_dist);
 
 object_t *ray_cast(space_t *s, ray_t *r, COORD_T *dist_ret, bool chk, COORD_T chk_dist);
-void ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples, color_t *c, void *seed);
+void ray_trace(space_t *s, unsigned int x, unsigned int y, color_t *c, void *seed);
 
 #endif

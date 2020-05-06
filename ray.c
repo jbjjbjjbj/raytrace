@@ -9,6 +9,8 @@
 
 #define PI 3.14159265359
 
+int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T scale, void *seed);
+
 // https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
 // http://viclw17.github.io/2018/07/16/raytracing-ray-sphere-intersection/
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
@@ -212,7 +214,7 @@ static void contribution_from_arealight(space_t *s, color_t *dest, object_t *o, 
 
 	// Do the same monte carlo as with environment but the starting point is the center of the circle.
 	// And the result is a point on the circle
-	for (int i = 0; i < 16; i++) {
+	for (int i = 0; i < s->gfx->arealight_samples; i++) {
 		// Do the monte carlo random distribution thing from the article
 		COORD_T r1 = ray_rand(seed);
 
@@ -245,7 +247,7 @@ static void contribution_from_arealight(space_t *s, color_t *dest, object_t *o, 
 	}
 
 	// Device by pdf
-	color_scale(&c, &c, ((COORD_T) 1 / 16) * (2 * PI));
+	color_scale(&c, &c, ((COORD_T) 1 / s->gfx->arealight_samples) * (2 * PI));
 
 	color_add(dest, dest, &c);
 
@@ -281,6 +283,9 @@ static void direct_light(space_t *s, color_t *dest, object_t *o, vector_t *N, ve
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing/global-illumination-path-tracing-practical-implementation
 static void env_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *point, void *seed) 
 {
+    if (s->gfx->envlight_samples == 0) {
+        return;
+    }
 	csystem_t cs;
 	csystem_init(&cs, N);
 	
@@ -292,7 +297,7 @@ static void env_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vecto
 	color_t acc;
 	color_set(&acc, 0, 0, 0);
 
-	for (unsigned i = 0; i < s->env_samples; i++) {
+	for (unsigned i = 0; i < s->gfx->envlight_samples; i++) {
 		COORD_T r1 = ray_rand(seed);
 		
 		// Calculate the random direction vector
@@ -318,11 +323,56 @@ static void env_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vecto
 	}
 
 	// Devide by number of samples and pdf
-	color_scale(&acc, &acc, ((COORD_T) 1/ s->env_samples) * (2 * PI));
+	color_scale(&acc, &acc, ((COORD_T) 1/ s->gfx->envlight_samples) * (2 * PI));
 
 	// Add to dest
 	color_add(dest, dest, &acc);
 
+}
+
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing/global-illumination-path-tracing-practical-implementation
+static void global_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *point, unsigned hop, void *seed)
+{
+    if (s->gfx->globallight_samples == 0) {
+        return;
+    }
+
+    // Init hemisphere translation
+    csystem_t cs;
+    csystem_init(&cs, N);
+
+    // Prepare ray
+    ray_t r;
+    r.start = point;
+
+    // Value for accumilating colors
+    color_t acc;
+    color_set(&acc, 0, 0, 0);
+    
+    for (unsigned i = 0; i < s->gfx->globallight_samples; i++) {
+		COORD_T r1 = ray_rand(seed);
+		
+		// Calculate the random direction vector
+		vector_t randdir;
+		csystem_hemisphere_random(&cs, r1, ray_rand(seed), &randdir);
+
+		// Convert to world cordinates using the calculated N vectors. 
+		csystem_calc_real(&cs, &randdir, &randdir);
+
+		// Check the direction for obstacles
+		r.direction = &randdir;
+
+        // Cast ray in direction if we have more hops
+        if (hop < s->gfx->depth) {
+            ray_trace_recur(s, &acc, &r, hop+1, r1, seed);
+        }
+    }
+
+    // Devide by number of samples and pdf
+	color_scale(&acc, &acc, ((COORD_T) 1/ s->gfx->globallight_samples) * (2 * PI));
+
+	// Add to dest
+	color_add(dest, dest, &acc);
 }
 
 int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T scale, void *seed)
@@ -359,9 +409,11 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 	}
 	
 	// Calculate environmental light
-	if (s->env_samples) {
+	if (s->env_enabled) {
 		env_light(s, &c, o, &N, r.start, seed);
 	}
+
+    global_light(s, &c, o, &N, r.start, hop, seed);
 
 	// Calculate reflection vector
 	if (hop < 10 && o->m->reflective > ZERO_APROX) {
@@ -383,7 +435,7 @@ exit:
 	return 0;
 }
 
-void ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples, color_t *c, void *seed)
+void ray_trace(space_t *s, unsigned int x, unsigned int y, color_t *c, void *seed)
 {
 	// Init return color. Will be accumilated with all the detected light.
 	color_set(c, 0, 0, 0);
@@ -397,13 +449,13 @@ void ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples, col
 
 	// Multiple samples for antialias
 	// TODO better distribution of antialias probes
-	for (int i = 0; i < samples; i++) {
+	for (int i = 0; i < s->gfx->antialias_samples; i++) {
 		color_t ctmp;
 		color_set(&ctmp, 0, 0, 0);
 		//memset(&ctmp, 0, sizeof(color_t));
 		
 		// Multiple samples inside same pixel
-		COORD_T tmp = (COORD_T) i/ (COORD_T) samples;
+		COORD_T tmp = (COORD_T) i/ (COORD_T) s->gfx->antialias_samples;
 		viewpoint_ray(&s->view, r.direction, x + tmp, y + tmp);
 
 		// Run the recursive ray trace
@@ -415,9 +467,9 @@ void ray_trace(space_t *s, unsigned int x, unsigned int y, unsigned samples, col
 	}
 
 	// Take the median
-	if (samples > 1) {
+	if (s->gfx->antialias_samples > 1) {
 		// Same as deviding by samples
-		color_scale(c, c, 1.0/ (COORD_T) samples);
+		color_scale(c, c, 1.0/ (COORD_T) s->gfx->antialias_samples);
 	}
 
 	// Add ambient

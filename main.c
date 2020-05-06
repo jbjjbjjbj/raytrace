@@ -34,6 +34,21 @@ pthread_mutex_t percentlock;
 char container[ CONTAINER_SIZE(OBJECTS, MATERIALS, LIGHTS) ];
 container_t *cont = (container_t *) container;
 
+settings_t gfx_high = {
+    .arealight_samples = 64,
+    .envlight_samples = 64,
+    .antialias_samples = 8,
+    .depth = 16,
+};
+
+settings_t gfx_low = {
+    .arealight_samples = 16,
+    .envlight_samples = 16,
+    .antialias_samples = 2,
+    .globallight_samples = 5,
+    .depth = 1,
+};
+
 // Implement random 
 COORD_T ray_rand(void *seed)
 {
@@ -51,17 +66,18 @@ int main()
 	color_set(&s->ambient, 0.09, 0.09, 0.09);
 	color_set(&s->back, 0.8, 0.8, 0.8);
 	color_set(&s->env_color, 0.13, 0.13, 0.13);
-	s->env_samples = 0;
+	s->env_enabled = false;
+    s->gfx = &gfx_low;
 
 	// Set viewpoint options
-	vector_set(&s->view.position, 0, 5, 5);
+	vector_set(&s->view.position, 0, 5, 4);
 	vector_set(&s->view.target, 0, 5, 0);
 	s->view.width = TESTW;
 	s->view.height = TESTH;
 
 	// Create materials
 	material_t *m = add_material(cont);
-	vector_set(&m->color, 0.4, 0.4, 1);
+	vector_set(&m->color, 1, 1, 1);
 	m->defuse = 1;
 	m->specular = 0;
 	m->shine = 80;
@@ -74,8 +90,8 @@ int main()
 	material_t *m2 = add_material(cont);
 	vector_set(&m2->color, 1, 1, 1);
 	m2->defuse = 0;
-	m2->specular = 0.5;
-	m2->shine = 50;
+	m2->specular = 0.1;
+	m2->shine = 1;
 	m2->reflective = 1;
 
 	material_t *mpl = add_material(cont);
@@ -99,18 +115,18 @@ int main()
 	
 	object_t *o;
 	o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, -2, 7, 1);
-	o->sph.radius = 1.5;
+	vector_set(&o->sph.center, 2, 6, -1);
+	o->sph.radius = 1;
 	o->m = m2;
 
 	o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, 0, 3, 1);
-	o->sph.radius = 1;
+	vector_set(&o->sph.center, 0, 4, -1);
+	o->sph.radius = 1.3;
 	o->m = m;
 
 	o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, 2, 4, 1);
-	o->sph.radius = 1;
+	vector_set(&o->sph.center, -2, 5, -2);
+	o->sph.radius = 1.3;
 	o->m = m;
 
 	o = add_object(cont, TYPE_PLANE);
@@ -145,15 +161,15 @@ int main()
 	
 	// Used for the light ball
 	o = add_object(cont, TYPE_SPHERE);
-	vector_set(&o->sph.center, 2, 7, 0);
-	o->sph.radius = 1;
+	vector_set(&o->sph.center, 0, 7, 0);
+	o->sph.radius = 0.5;
 	o->m = ml;
 
 	light_t *l = add_light(cont, TYPE_L_AREA);
 	//vector_set(&l->point.pos, 2, 8, -1);
 	l->area = o;
 	color_set(&l->color, 1, 1, 1);
-	l->radiance = 0.8;
+	l->radiance = 0.1;
 
 	pgm_write_header(stdout, TESTW, TESTH);
 
@@ -214,7 +230,7 @@ void *worker_func(void *arg) {
 			color_t *c = &office->image[ y * TESTW + x ];
 			//color_t c;
 			seed = x * y;
-			ray_trace(&cont->space, TESTW - x, TESTH - y, 2, c, &seed);
+			ray_trace(&cont->space, TESTW - x, TESTH - y, c, &seed);
 			color_clamp(c);
 		}
 
