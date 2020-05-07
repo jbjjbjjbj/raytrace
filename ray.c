@@ -418,6 +418,7 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 	// Check if emissive
 	if (o->m->emissive > ZERO_APROX) {
 		color_set(&c, o->m->emissive, o->m->emissive, o->m->emissive);
+        goto exit;
 	}
 
 	// Check if we should calculate light
@@ -470,11 +471,12 @@ void ray_trace(space_t *s, unsigned int x, unsigned int y, color_t *c, void *see
 	for (int i = 0; i < s->gfx->antialias_samples; i++) {
 		color_t ctmp;
 		color_set(&ctmp, 0, 0, 0);
-		//memset(&ctmp, 0, sizeof(color_t));
+
+        // Calculate random direction
+		COORD_T r1 = ray_rand(seed);
+        COORD_T r2 = ray_rand(seed);
 		
-		// Multiple samples inside same pixel
-		COORD_T tmp = (COORD_T) i/ (COORD_T) s->gfx->antialias_samples;
-		viewpoint_ray(&s->view, r.direction, x + tmp, y + tmp);
+		viewpoint_ray(&s->view, r.direction, x + r1, y + r2);
 
 		// Run the recursive ray trace
 		if (ray_trace_recur(s, &ctmp, &r, 0, 1, seed)) {
