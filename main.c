@@ -14,7 +14,7 @@
 
 #define PERCENTSTEP (TESTH / 100)
 
-#define WORKERS 4
+#define WORKERS 1
 
 void *worker_func(void *arg);
 
@@ -44,12 +44,12 @@ settings_t gfx_high = {
 };
 
 settings_t gfx_low = {
-    .arealight_samples = 16,
+    .arealight_samples = 4,
     .envlight_samples = 16,
-    .antialias_samples = 2,
+    .antialias_samples = 100,
     .globallight_samples = 16,
     .gl_opt_depth = 1,
-    .depth = 1,
+    .depth = 16,
 };
 
 settings_t gfx_very = {

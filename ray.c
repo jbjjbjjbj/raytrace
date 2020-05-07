@@ -454,6 +454,83 @@ exit:
 	return 0;
 }
 
+int path_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T scale, void *seed)
+{
+	COORD_T dist;
+
+	object_t *o = ray_cast(s, ray, &dist, false, 0);
+	if (!o) {
+        return 1;
+	}
+
+	color_t c;
+	color_set(&c, 0, 0, 0);
+
+	vector_t rdir, rstart;
+	ray_t r = {.start = &rstart, .direction = &rdir};
+
+	vector_scale(r.start, ray->direction, dist);
+	vector_add(r.start, r.start, ray->start);
+
+	// Calculate normal vector
+	vector_t N;
+	obj_norm_at(o, &N, r.start, ray->direction);
+
+	// Check if emissive
+	if (o->m->emissive > ZERO_APROX) {
+        printf("Emisive\n");
+		color_set(&c, o->m->emissive, o->m->emissive, o->m->emissive);
+        goto exit;
+	}
+
+	if (o->m->reflective > ZERO_APROX) {
+        printf("reflective\n");
+		vector_scale(r.direction, &N, 2 * vector_dot(ray->direction, &N));
+		vector_sub(r.direction, ray->direction, r.direction);
+
+		path_trace_recur(s, &c, &r, hop+1, o->m->reflective, seed);
+        goto exit;
+    }
+
+    printf("random\n");
+    // Init hemisphere translation
+    csystem_t cs;
+    csystem_init(&cs, &N);
+
+    COORD_T r1 = ray_rand(seed);
+    // Calculate the random direction vector
+    vector_t randdir;
+    csystem_hemisphere_random(&cs, r1, ray_rand(seed), &randdir);
+
+    // Convert to world cordinates using the calculated N vectors. 
+    csystem_calc_real(&cs, &randdir, &randdir);
+
+    // Probability of the raydirection
+    COORD_T p = 1.0/(PI * 2);
+
+    // Calculate the defuse reflection
+    r.direction = &randdir;
+    COORD_T cl = vector_dot(&randdir, &N) / p;
+
+    // Cast ray in direction if we have more hops
+    if (hop < s->gfx->depth) {
+        path_trace_recur(s, &c, &r, hop+1, r1, seed);
+    }
+
+    // Scale by own color
+	color_scale_vector(&c, &c, &o->m->color);
+
+    // Calculate Deffuse light
+    color_scale(&c, &c, cl * o->m->defuse);
+
+exit:
+
+    color_scale(&c, &c, scale);
+    color_add(dest, &c, dest);
+
+    return 0;
+}
+
 void ray_trace(space_t *s, unsigned int x, unsigned int y, color_t *c, void *seed)
 {
 	// Init return color. Will be accumilated with all the detected light.
@@ -468,7 +545,7 @@ void ray_trace(space_t *s, unsigned int x, unsigned int y, color_t *c, void *see
 
 	// Multiple samples for antialias
 	// TODO better distribution of antialias probes
-	for (int i = 0; i < s->gfx->antialias_samples; i++) {
+	for (unsigned i = 0; i < s->gfx->antialias_samples; i++) {
 		color_t ctmp;
 		color_set(&ctmp, 0, 0, 0);
 
@@ -479,13 +556,16 @@ void ray_trace(space_t *s, unsigned int x, unsigned int y, color_t *c, void *see
 		viewpoint_ray(&s->view, r.direction, x + r1, y + r2);
 
 		// Run the recursive ray trace
-		if (ray_trace_recur(s, &ctmp, &r, 0, 1, seed)) {
+		if (path_trace_recur(s, &ctmp, &r, 0, 1, seed)) {
+            printf("Hit nothing");
             // Hit nothing add back
             color_add(&ctmp, &ctmp, &s->back);
         }
 
 		// Color_add will not go above 1. In this case we don't want that.
 		c->r += ctmp.r; c->g += ctmp.g; c->b += ctmp.b;
+        printf("i: %d ", i);
+        vector_print(c);
 
 	}
 
