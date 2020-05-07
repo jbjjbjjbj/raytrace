@@ -43,6 +43,17 @@ COORD_T vector_len(vector_t *v)
 	return sqrt( v->x * v->x + v->y * v->y + v->z * v->z );
 }
 
+void vector_norm(vector_t *v)
+{
+    COORD_T len = vector_len(v);
+    if (len == 0) {
+        vector_set(v, 0, 0, 0);
+        return;
+    }
+
+    vector_scale_inv(v, v, len);
+}
+
 vector_t *vector_add(vector_t *dest, vector_t *a, vector_t *b)
 {
 	dest = vector_exists(dest);

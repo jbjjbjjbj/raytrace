@@ -37,15 +37,27 @@ container_t *cont = (container_t *) container;
 settings_t gfx_high = {
     .arealight_samples = 64,
     .envlight_samples = 64,
-    .antialias_samples = 8,
-    .depth = 16,
+    .antialias_samples = 2,
+    .globallight_samples = 32,
+    .gl_opt_depth = 1,
+    .depth = 2,
 };
 
 settings_t gfx_low = {
     .arealight_samples = 16,
     .envlight_samples = 16,
     .antialias_samples = 2,
-    .globallight_samples = 5,
+    .globallight_samples = 16,
+    .gl_opt_depth = 1,
+    .depth = 1,
+};
+
+settings_t gfx_very = {
+    .arealight_samples = 8,
+    .envlight_samples = 8,
+    .antialias_samples = 2,
+    .globallight_samples = 2,
+    .gl_opt_depth = 0,
     .depth = 1,
 };
 
@@ -64,7 +76,8 @@ int main()
 	
 	// Set space options
 	color_set(&s->ambient, 0.09, 0.09, 0.09);
-	color_set(&s->back, 0.8, 0.8, 0.8);
+	//color_set(&s->back, 0.8, 0.8, 0.8);
+	color_set(&s->back, 0.0, 0.0, 0.0);
 	color_set(&s->env_color, 0.13, 0.13, 0.13);
 	s->env_enabled = false;
     s->gfx = &gfx_low;
@@ -166,7 +179,7 @@ int main()
 	o->m = ml;
 
 	light_t *l = add_light(cont, TYPE_L_AREA);
-	//vector_set(&l->point.pos, 2, 8, -1);
+	//vector_set(&l->point.pos, 0, 5, 0);
 	l->area = o;
 	color_set(&l->color, 1, 1, 1);
 	l->radiance = 0.1;

@@ -135,30 +135,28 @@ object_t *ray_cast(space_t *s, ray_t *r, COORD_T *dist_ret, bool chk, COORD_T ch
 	return smallest;
 }
 
-// Light (l) the object o reflects. Given is the point of intersect, vector to the light l, vector to viewer V, and normal at point N.
-static void reflected_at(object_t *o, color_t *dest, light_t *light, COORD_T dist, vector_t *point, vector_t *l, vector_t *V, vector_t *N) {
-	// Calculate light intensity
-	COORD_T i = light->radiance / ( dist * dist);
+// Color the object o reflects. Given is the point of intersect, vector to the light dir, vector to viewer V, and normal at point N.
+static void reflected_at(object_t *o, color_t *dest, color_t *incolor, COORD_T intensity, vector_t *point, vector_t *dir, vector_t *V, vector_t *N) {
 
 	// Calculate Deffuse part
 	color_t tmp;
-	COORD_T cl = vector_dot(l, N) * i;
+	COORD_T cl = vector_dot(dir, N) * intensity;
 	if (cl > 0) {
-		color_scale(&tmp, &light->color, cl * o->m->defuse);
+		color_scale(&tmp, incolor, cl * o->m->defuse);
 		color_add(dest, &tmp, dest);
 	}
 
 	// calculate specular part. TODO implement blinn-phong
 	// Calculate R_m
 	vector_t R;
-	vector_scale(&R, N, 2 * vector_dot(l, N));
-	vector_sub(&R, &R, l);
+	vector_scale(&R, N, 2 * vector_dot(dir, N));
+	vector_sub(&R, &R, dir);
 
 	// Add it to the light
-	cl = vector_dot(&R, V) * i;
+	cl = vector_dot(&R, V) * intensity;
 	if (cl > 0) {
 		cl = pow(cl, o->m->shine);
-		color_scale(&tmp, &light->color, cl * o->m->specular);
+		color_scale(&tmp, incolor, cl * o->m->specular);
 		color_add(dest, &tmp, dest);
 	}
 }
@@ -177,7 +175,7 @@ static void contribution_from_pointlight(space_t *s, color_t *dest, object_t *o,
 	COORD_T d = vector_len(&l);
 
 	// Normalice
-	vector_scale_inv(&l, &l, vector_len(&l));
+    vector_norm(&l);
 
 	// Find obstacles
 	r.direction = &l;
@@ -187,7 +185,8 @@ static void contribution_from_pointlight(space_t *s, color_t *dest, object_t *o,
 	}
 
 	// Calculate the reflected light
-	reflected_at(o, dest, light, d, point, &l, V, N);
+    COORD_T i = light->radiance / ( d * d);
+	reflected_at(o, dest, &light->color, i, point, &l, V, N);
 }
 
 // Many of these can maybe be put in a context struct
@@ -206,7 +205,7 @@ static void contribution_from_arealight(space_t *s, color_t *dest, object_t *o, 
 	// Calculate vector from light to point
 	vector_t l;
 	vector_sub(&l, point, &light->area->sph.center);
-	vector_scale_inv(&l, &l, vector_len(&l));
+    vector_norm(&l);
 
 	// Initialize the transformation stuff
 	csystem_t cs;
@@ -241,8 +240,9 @@ static void contribution_from_arealight(space_t *s, color_t *dest, object_t *o, 
 			continue;
 		}
 
-		// Add the light contribution, Not sure why it is scaled
-		reflected_at(o, &c, light, dist, point, &randpoint, V, N);
+		// Add the light contribution
+        COORD_T i = light->radiance / ( dist * dist);
+        reflected_at(o, &c, &light->color, i, point, &randpoint, V, N);
 
 	}
 
@@ -260,7 +260,7 @@ static void direct_light(space_t *s, color_t *dest, object_t *o, vector_t *N, ve
 	vector_sub(&V, eye, point);
 
 	// Normalice it
-	vector_scale_inv(&V, &V, vector_len(&V));
+    vector_norm(&V);
 
 	// Loop lights
 	light_t *light = s->lights;
@@ -348,8 +348,16 @@ static void global_light(space_t *s, color_t *dest, object_t *o, vector_t *N, ve
     // Value for accumilating colors
     color_t acc;
     color_set(&acc, 0, 0, 0);
-    
-    for (unsigned i = 0; i < s->gfx->globallight_samples; i++) {
+
+    // Samples is lowered for every hop
+    unsigned samples;
+    if (hop < s->gfx->gl_opt_depth) {
+        samples = s->gfx->globallight_samples / (hop + 1);
+    } else {
+        samples = s->gfx->globallight_samples / (s->gfx->gl_opt_depth + 1);
+    }
+
+    for (unsigned i = 0; i < samples; i++) {
 		COORD_T r1 = ray_rand(seed);
 		
 		// Calculate the random direction vector
@@ -361,15 +369,25 @@ static void global_light(space_t *s, color_t *dest, object_t *o, vector_t *N, ve
 
 		// Check the direction for obstacles
 		r.direction = &randdir;
+        COORD_T cl = vector_dot(&randdir, N);
 
-        // Cast ray in direction if we have more hops
-        if (hop < s->gfx->depth) {
-            ray_trace_recur(s, &acc, &r, hop+1, r1, seed);
+        // Only recurse if neccesary
+        if (cl > 0.01) {
+            // Cast ray in direction if we have more hops
+            color_t tmp;
+            color_set(&tmp, 0, 0, 0);
+            if (hop < s->gfx->depth) {
+                ray_trace_recur(s, &tmp, &r, hop+1, r1, seed);
+            }
+
+            // Calculate Deffuse light
+            color_scale(&tmp, &tmp, cl * o->m->defuse);
+            color_add(&acc, &tmp, &acc);
         }
     }
 
     // Devide by number of samples and pdf
-	color_scale(&acc, &acc, ((COORD_T) 1/ s->gfx->globallight_samples) * (2 * PI));
+	color_scale(&acc, &acc, ((COORD_T) 1/ samples) * (2 * PI));
 
 	// Add to dest
 	color_add(dest, dest, &acc);
@@ -378,14 +396,14 @@ static void global_light(space_t *s, color_t *dest, object_t *o, vector_t *N, ve
 int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T scale, void *seed)
 {
 	COORD_T dist;
-	color_t c;
-	color_set(&c, 0, 0, 0);
 
 	object_t *o = ray_cast(s, ray, &dist, false, 0);
 	if (!o) {
-		color_add(&c, &c, &s->back);
-		goto exit;
+        return 1;
 	}
+
+	color_t c;
+	color_set(&c, 0, 0, 0);
 
 	vector_t rdir, rstart;
 	ray_t r = {.start = &rstart, .direction = &rdir};
@@ -406,6 +424,7 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 	if (o->m->defuse + o->m->specular > ZERO_APROX) {
 		// Add all light hitting o at r.start to c
 		direct_light(s, &c, o, &N, ray->start, r.start, seed);
+        global_light(s, &c, o, &N, r.start, hop, seed);
 	}
 	
 	// Calculate environmental light
@@ -413,7 +432,6 @@ int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T
 		env_light(s, &c, o, &N, r.start, seed);
 	}
 
-    global_light(s, &c, o, &N, r.start, hop, seed);
 
 	// Calculate reflection vector
 	if (hop < 10 && o->m->reflective > ZERO_APROX) {
@@ -459,7 +477,10 @@ void ray_trace(space_t *s, unsigned int x, unsigned int y, color_t *c, void *see
 		viewpoint_ray(&s->view, r.direction, x + tmp, y + tmp);
 
 		// Run the recursive ray trace
-		ray_trace_recur(s, &ctmp, &r, 0, 1, seed);
+		if (ray_trace_recur(s, &ctmp, &r, 0, 1, seed)) {
+            // Hit nothing add back
+            color_add(&ctmp, &ctmp, &s->back);
+        }
 
 		// Color_add will not go above 1. In this case we don't want that.
 		c->r += ctmp.r; c->g += ctmp.g; c->b += ctmp.b;

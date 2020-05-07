@@ -18,6 +18,7 @@ vector_t *vector_copy(vector_t *dest, vector_t *src);
 
 // Calculate the length of v
 COORD_T vector_len(vector_t *v);
+void vector_norm(vector_t *v);
 
 COORD_T vector_dot(vector_t *a, vector_t *b);
 

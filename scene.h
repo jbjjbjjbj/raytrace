@@ -80,6 +80,7 @@ typedef struct {
     unsigned globallight_samples;
 
     unsigned depth;
+    unsigned gl_opt_depth;
 } settings_t;
 
 typedef struct {
