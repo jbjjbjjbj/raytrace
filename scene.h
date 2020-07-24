@@ -14,7 +14,10 @@
 #define TYPE_L_POINT 1
 #define TYPE_L_AREA 2
 
-#define CONTAINER_SIZE(objs, mats, ligs) (sizeof(container_t) + objs * sizeof(object_t) + ligs * sizeof(light_t))
+#define CONTAINER_SIZE(objs, mats, ligs) (sizeof(container_t) + \
+        objs * sizeof(object_t) + \
+        mats * sizeof(material_t) + \
+        ligs * sizeof(light_t))
 
 typedef struct {
 	vector_t center;
@@ -69,18 +72,11 @@ typedef struct light_s{
 	struct light_s *next;
 } light_t;
 
-light_t l;
-
 // Graphics settings
 // Should actually sit in ray.c
 typedef struct {
-    unsigned arealight_samples;
-    unsigned antialias_samples;
-    unsigned envlight_samples;
-    unsigned globallight_samples;
-
+    unsigned samples;
     unsigned depth;
-    unsigned gl_opt_depth;
 } settings_t;
 
 typedef struct {

@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define COLOR_MAX 255
 
@@ -39,9 +40,15 @@ void color_clamp(color_t *c)
 
 int pgm_write_pixel(FILE *fp, color_t *c)
 {
+    //color_gamma_correct(c);
 	return fprintf(fp, "%.0lf %.0lf %.0lf\n", c->r * COLOR_MAX, c->g * COLOR_MAX, c->b * COLOR_MAX);
 }
 
+void color_gamma_correct(color_t *c) {
+    c->r = sqrt(c->r);
+    c->g = sqrt(c->g);
+    c->b = sqrt(c->b);
+}
 color_t *color_set(color_t *c, COORD_T r, COORD_T g, COORD_T b)
 {
 	c->r = r;

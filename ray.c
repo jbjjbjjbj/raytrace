@@ -9,6 +9,8 @@
 
 #define PI 3.14159265359
 
+int path_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T scale, void *seed);
+
 int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T scale, void *seed);
 
 // https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
@@ -189,103 +191,10 @@ static void contribution_from_pointlight(space_t *s, color_t *dest, object_t *o,
 	reflected_at(o, dest, &light->color, i, point, &l, V, N);
 }
 
-// Many of these can maybe be put in a context struct
-static void contribution_from_arealight(space_t *s, color_t *dest, object_t *o, light_t *light, vector_t *point, vector_t *V, vector_t *N, void *seed)
-{
-	// This only works with spheres
-	assert(light->area->type == TYPE_SPHERE);
-
-	// Color to collect temporary results in
-	color_t c;
-	color_set(&c, 0, 0, 0);
-
-	ray_t ray;
-	ray.start = point;
-
-	// Calculate vector from light to point
-	vector_t l;
-	vector_sub(&l, point, &light->area->sph.center);
-    vector_norm(&l);
-
-	// Initialize the transformation stuff
-	csystem_t cs;
-	csystem_init(&cs, &l);
-
-	// Do the same monte carlo as with environment but the starting point is the center of the circle.
-	// And the result is a point on the circle
-	for (int i = 0; i < s->gfx->arealight_samples; i++) {
-		// Do the monte carlo random distribution thing from the article
-		COORD_T r1 = ray_rand(seed);
-
-		// Random direction on halv sphere pointing towards point
-		vector_t randpoint;
-		csystem_hemisphere_random(&cs, r1, ray_rand(seed), &randpoint);
-		csystem_calc_real(&cs, &randpoint, &randpoint);
-		
-		// Shift it up to center of circle
-		vector_add(&randpoint, &randpoint, &light->area->sph.center);
-
-		// Cast a ray towards it, reuse randpoint as direction
-		vector_sub(&randpoint, &randpoint, point);
-		COORD_T dist = vector_len(&randpoint);
-
-		vector_t dir;
-		vector_scale_inv(&dir, &randpoint, dist);
-
-		ray.direction = &dir;
-
-		object_t *obs = ray_cast(s, &ray, NULL, true, dist - ZERO_APROX);
-		if (obs) {
-			// We hit something skip it.
-			continue;
-		}
-
-		// Add the light contribution
-        COORD_T i = light->radiance / ( dist * dist);
-        reflected_at(o, &c, &light->color, i, point, &randpoint, V, N);
-
-	}
-
-	// Device by pdf
-	color_scale(&c, &c, ((COORD_T) 1 / s->gfx->arealight_samples) * (2 * PI));
-
-	color_add(dest, dest, &c);
-
-}
-
-static void direct_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point, void *seed)
-{
-	// And vector towards viewer
-	vector_t V;
-	vector_sub(&V, eye, point);
-
-	// Normalice it
-    vector_norm(&V);
-
-	// Loop lights
-	light_t *light = s->lights;
-	while (light) {
-		// Calculate contribution depending on the light type
-		switch (light->type) {
-			case TYPE_L_POINT:
-				contribution_from_pointlight(s, dest, o, light, point, &V, N);
-				break;
-			case TYPE_L_AREA:
-				contribution_from_arealight(s, dest, o, light, point, &V, N, seed);
-				break;
-		}
-
-		light = light->next;
-	}
-}
-
 // Calculates the global illumination. Pretty slow
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing/global-illumination-path-tracing-practical-implementation
 static void env_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *point, void *seed) 
 {
-    if (s->gfx->envlight_samples == 0) {
-        return;
-    }
 	csystem_t cs;
 	csystem_init(&cs, N);
 	
@@ -297,7 +206,7 @@ static void env_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vecto
 	color_t acc;
 	color_set(&acc, 0, 0, 0);
 
-	for (unsigned i = 0; i < s->gfx->envlight_samples; i++) {
+	for (unsigned i = 0; i < 0; i++) {
 		COORD_T r1 = ray_rand(seed);
 		
 		// Calculate the random direction vector
@@ -323,7 +232,7 @@ static void env_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vecto
 	}
 
 	// Devide by number of samples and pdf
-	color_scale(&acc, &acc, ((COORD_T) 1/ s->gfx->envlight_samples) * (2 * PI));
+	color_scale(&acc, &acc, ((COORD_T) 1/ 0) * (2 * PI));
 
 	// Add to dest
 	color_add(dest, dest, &acc);
@@ -331,11 +240,8 @@ static void env_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vecto
 }
 
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing/global-illumination-path-tracing-practical-implementation
-static void global_light(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *point, unsigned hop, void *seed)
+static void light_in(space_t *s, color_t *dest, object_t *o, vector_t *N, vector_t *eye, vector_t *point, unsigned hop, void *seed)
 {
-    if (s->gfx->globallight_samples == 0) {
-        return;
-    }
 
     // Init hemisphere translation
     csystem_t cs;
@@ -345,113 +251,28 @@ static void global_light(space_t *s, color_t *dest, object_t *o, vector_t *N, ve
     ray_t r;
     r.start = point;
 
-    // Value for accumilating colors
-    color_t acc;
-    color_set(&acc, 0, 0, 0);
+    // Calculate the random direction vector
+    vector_t randdir;
+    csystem_hemisphere_random(&cs, ray_rand(seed), ray_rand(seed), &randdir);
 
-    // Samples is lowered for every hop
-    unsigned samples;
-    if (hop < s->gfx->gl_opt_depth) {
-        samples = s->gfx->globallight_samples / (hop + 1);
-    } else {
-        samples = s->gfx->globallight_samples / (s->gfx->gl_opt_depth + 1);
-    }
+    // Convert to world cordinates using the calculated N vectors. 
+    csystem_calc_real(&cs, &randdir, &randdir);
 
-    for (unsigned i = 0; i < samples; i++) {
-		COORD_T r1 = ray_rand(seed);
-		
-		// Calculate the random direction vector
-		vector_t randdir;
-		csystem_hemisphere_random(&cs, r1, ray_rand(seed), &randdir);
+    r.direction = &randdir;
+    COORD_T cl = 2 * vector_dot(&randdir, N) * o->m->defuse;
 
-		// Convert to world cordinates using the calculated N vectors. 
-		csystem_calc_real(&cs, &randdir, &randdir);
+    vector_t V;
+    vector_sub(&V, eye, point);
 
-		// Check the direction for obstacles
-		r.direction = &randdir;
-        COORD_T cl = vector_dot(&randdir, N);
+    path_trace_recur(s, dest, &r, hop+1, cl, seed);
 
-        // Only recurse if neccesary
-        if (cl > 0.01) {
-            // Cast ray in direction if we have more hops
-            color_t tmp;
-            color_set(&tmp, 0, 0, 0);
-            if (hop < s->gfx->depth) {
-                ray_trace_recur(s, &tmp, &r, hop+1, r1, seed);
-            }
-
-            // Calculate Deffuse light
-            color_scale(&tmp, &tmp, cl * o->m->defuse);
-            color_add(&acc, &tmp, &acc);
+    light_t *light = s->lights;
+    while (light) {
+        if (light->type) {
+            contribution_from_pointlight(s, dest, o, light, point, &V, N);
+            light = light->next;
         }
     }
-
-    // Devide by number of samples and pdf
-	color_scale(&acc, &acc, ((COORD_T) 1/ samples) * (2 * PI));
-
-	// Add to dest
-	color_add(dest, dest, &acc);
-}
-
-int ray_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T scale, void *seed)
-{
-	COORD_T dist;
-
-	object_t *o = ray_cast(s, ray, &dist, false, 0);
-	if (!o) {
-        return 1;
-	}
-
-	color_t c;
-	color_set(&c, 0, 0, 0);
-
-	vector_t rdir, rstart;
-	ray_t r = {.start = &rstart, .direction = &rdir};
-
-	vector_scale(r.start, ray->direction, dist);
-	vector_add(r.start, r.start, ray->start);
-
-	// Calculate normal vector
-	vector_t N;
-	obj_norm_at(o, &N, r.start, ray->direction);
-
-	// Check if emissive
-	if (o->m->emissive > ZERO_APROX) {
-		color_set(&c, o->m->emissive, o->m->emissive, o->m->emissive);
-        goto exit;
-	}
-
-	// Check if we should calculate light
-	if (o->m->defuse + o->m->specular > ZERO_APROX) {
-		// Add all light hitting o at r.start to c
-		direct_light(s, &c, o, &N, ray->start, r.start, seed);
-        global_light(s, &c, o, &N, r.start, hop, seed);
-	}
-	
-	// Calculate environmental light
-	if (s->env_enabled) {
-		env_light(s, &c, o, &N, r.start, seed);
-	}
-
-
-	// Calculate reflection vector
-	if (hop < 10 && o->m->reflective > ZERO_APROX) {
-		vector_scale(r.direction, &N, 2 * vector_dot(ray->direction, &N));
-		vector_sub(r.direction, ray->direction, r.direction);
-
-		ray_trace_recur(s, &c, &r, hop+1, o->m->reflective, seed);
-	}
-
-
-	// Scale by the objects own color.
-	color_scale_vector(&c, &c, &o->m->color);
-
-exit:
-	// Add it to the result
-	color_scale(&c, &c, scale);
-	color_add(dest, dest, &c);
-
-	return 0;
 }
 
 int path_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_T scale, void *seed)
@@ -476,62 +297,40 @@ int path_trace_recur(space_t *s, color_t *dest, ray_t *ray, unsigned hop, COORD_
 	vector_t N;
 	obj_norm_at(o, &N, r.start, ray->direction);
 
-	// Check if emissive
+    // Check if emissive
 	if (o->m->emissive > ZERO_APROX) {
-        printf("Emisive\n");
 		color_set(&c, o->m->emissive, o->m->emissive, o->m->emissive);
         goto exit;
 	}
 
+    if (hop >= s->gfx->depth) {
+        return 1;
+    }
+
+	// Check if we should calculate light
+	if (o->m->defuse + o->m->specular > ZERO_APROX) {
+		light_in(s, &c, o, &N, ray->start, r.start, hop, seed);
+	}
+
 	if (o->m->reflective > ZERO_APROX) {
-        printf("reflective\n");
 		vector_scale(r.direction, &N, 2 * vector_dot(ray->direction, &N));
 		vector_sub(r.direction, ray->direction, r.direction);
 
 		path_trace_recur(s, &c, &r, hop+1, o->m->reflective, seed);
-        goto exit;
-    }
-
-    printf("random\n");
-    // Init hemisphere translation
-    csystem_t cs;
-    csystem_init(&cs, &N);
-
-    COORD_T r1 = ray_rand(seed);
-    // Calculate the random direction vector
-    vector_t randdir;
-    csystem_hemisphere_random(&cs, r1, ray_rand(seed), &randdir);
-
-    // Convert to world cordinates using the calculated N vectors. 
-    csystem_calc_real(&cs, &randdir, &randdir);
-
-    // Probability of the raydirection
-    COORD_T p = 1.0/(PI * 2);
-
-    // Calculate the defuse reflection
-    r.direction = &randdir;
-    COORD_T cl = vector_dot(&randdir, &N) / p;
-
-    // Cast ray in direction if we have more hops
-    if (hop < s->gfx->depth) {
-        path_trace_recur(s, &c, &r, hop+1, r1, seed);
     }
 
     // Scale by own color
 	color_scale_vector(&c, &c, &o->m->color);
 
-    // Calculate Deffuse light
-    color_scale(&c, &c, cl * o->m->defuse);
-
 exit:
-
     color_scale(&c, &c, scale);
     color_add(dest, &c, dest);
+    //printf("Adding color "); pgm_write_pixel(stdout, &c);
 
     return 0;
 }
 
-void ray_trace(space_t *s, unsigned int x, unsigned int y, color_t *c, void *seed)
+void path_trace(space_t *s, unsigned int x, unsigned int y, color_t *c, void *seed)
 {
 	// Init return color. Will be accumilated with all the detected light.
 	color_set(c, 0, 0, 0);
@@ -544,8 +343,7 @@ void ray_trace(space_t *s, unsigned int x, unsigned int y, color_t *c, void *see
 	r.direction = vector_set(&dir, 0, 0, 0);
 
 	// Multiple samples for antialias
-	// TODO better distribution of antialias probes
-	for (unsigned i = 0; i < s->gfx->antialias_samples; i++) {
+	for (unsigned i = 0; i < s->gfx->samples; i++) {
 		color_t ctmp;
 		color_set(&ctmp, 0, 0, 0);
 
@@ -556,23 +354,22 @@ void ray_trace(space_t *s, unsigned int x, unsigned int y, color_t *c, void *see
 		viewpoint_ray(&s->view, r.direction, x + r1, y + r2);
 
 		// Run the recursive ray trace
+        //printf("New ray x: %f, y: %f\n", x + r1, y + r2);
 		if (path_trace_recur(s, &ctmp, &r, 0, 1, seed)) {
-            printf("Hit nothing");
             // Hit nothing add back
             color_add(&ctmp, &ctmp, &s->back);
         }
 
 		// Color_add will not go above 1. In this case we don't want that.
 		c->r += ctmp.r; c->g += ctmp.g; c->b += ctmp.b;
-        printf("i: %d ", i);
-        vector_print(c);
+        //printf("Total r: %f, g: %f, b: %f\n", c->r, c->g, c->b);
 
 	}
 
 	// Take the median
-	if (s->gfx->antialias_samples > 1) {
+	if (s->gfx->samples > 1) {
 		// Same as deviding by samples
-		color_scale(c, c, 1.0/ (COORD_T) s->gfx->antialias_samples);
+		color_scale(c, c, 1.0/ (COORD_T) s->gfx->samples);
 	}
 
 	// Add ambient

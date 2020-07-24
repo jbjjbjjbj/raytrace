@@ -9,12 +9,12 @@
 #include "scene.h"
 #include "pgm.h"
 
-#define TESTW 1000
-#define TESTH 1000
+#define TESTW 500
+#define TESTH 500
 
 #define PERCENTSTEP (TESTH / 100)
 
-#define WORKERS 1
+#define WORKERS 4
 
 void *worker_func(void *arg);
 
@@ -34,31 +34,9 @@ pthread_mutex_t percentlock;
 char container[ CONTAINER_SIZE(OBJECTS, MATERIALS, LIGHTS) ];
 container_t *cont = (container_t *) container;
 
-settings_t gfx_high = {
-    .arealight_samples = 64,
-    .envlight_samples = 64,
-    .antialias_samples = 2,
-    .globallight_samples = 32,
-    .gl_opt_depth = 1,
-    .depth = 2,
-};
-
 settings_t gfx_low = {
-    .arealight_samples = 4,
-    .envlight_samples = 16,
-    .antialias_samples = 100,
-    .globallight_samples = 16,
-    .gl_opt_depth = 1,
-    .depth = 16,
-};
-
-settings_t gfx_very = {
-    .arealight_samples = 8,
-    .envlight_samples = 8,
-    .antialias_samples = 2,
-    .globallight_samples = 2,
-    .gl_opt_depth = 0,
-    .depth = 1,
+    .samples = 10,
+    .depth = 15,
 };
 
 // Implement random 
@@ -98,7 +76,7 @@ int main()
 
 	material_t *ml = add_material(cont);
 	vector_set(&ml->color, 1, 1, 1);
-	ml->emissive = 1;
+	ml->emissive = 8;
 
 	material_t *m2 = add_material(cont);
 	vector_set(&m2->color, 1, 1, 1);
@@ -172,17 +150,18 @@ int main()
 	vector_set(&o->pl.norm, 1, 0, 0);
 	o->m = mplred;
 	
-	// Used for the light ball
+	// light ball
 	o = add_object(cont, TYPE_SPHERE);
 	vector_set(&o->sph.center, 0, 7, 0);
 	o->sph.radius = 0.5;
 	o->m = ml;
 
-	light_t *l = add_light(cont, TYPE_L_AREA);
-	//vector_set(&l->point.pos, 0, 5, 0);
-	l->area = o;
+    /*
+	light_t *l = add_light(cont, TYPE_L_POINT);
+	vector_set(&l->point.pos, 0, 7, 0);
 	color_set(&l->color, 1, 1, 1);
-	l->radiance = 0.1;
+	l->radiance = 5;
+    */
 
 	pgm_write_header(stdout, TESTW, TESTH);
 
@@ -243,14 +222,14 @@ void *worker_func(void *arg) {
 			color_t *c = &office->image[ y * TESTW + x ];
 			//color_t c;
 			seed = x * y;
-			ray_trace(&cont->space, TESTW - x, TESTH - y, c, &seed);
+			path_trace(&cont->space, TESTW - x, TESTH - y, c, &seed);
 			color_clamp(c);
 		}
 
 		if (y % PERCENTSTEP == 0) {
 			// Unlock the thingy
 			pthread_mutex_lock(&percentlock);	
-			fprintf(stderr, "%d%\n", percent++);
+			fprintf(stderr, "%d%%\n", percent++);
 			pthread_mutex_unlock(&percentlock);	
 		}
 	}
