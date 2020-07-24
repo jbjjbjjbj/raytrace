@@ -12,5 +12,5 @@ Probably switching to c++ and pathtracing instead.
 Below is a image generated.
 Two links have been added to accommodate cgit and github hosting.
 
-![Github link](image/test.png)
+![Github link](https://raw.githubusercontent.com/jbjjbjjbj/raytrace/image/test.png)
 ![Cgit link](/raytrace/plain/test.png?h=image)
